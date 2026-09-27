@@ -86,9 +86,10 @@
 		FOR UPDATE
 	</select>
 
-	<!-- 삭제 순서 = FK 순서. 거래가 카테고리를, 카테고리가 계정을 참조한다.
+	<!-- 삭제 순서 = FK 순서. 거래가 카테고리를, 카테고리·Refresh 장부가 계정을 참조한다.
 	     카테고리는 자기참조 FK(FK_PCAT_PARENT) 때문에 소분류 → 나머지 두 번 (qa/reset-data.sql 과 같은 이유, 2계층이라 두 번이면 끝)
-	     ★ users 를 참조하는 테이블을 쓰기 시작하면(refresh_tokens · auth_verifications · social_accounts · 공동 가계부)
+	     refresh_tokens 는 계정만 참조해 deleteUser 앞이면 어디든 된다 (2026-09-27 추가 — 빠뜨려 CI #64 파기 실패)
+	     ★ users 를 참조하는 테이블을 쓰기 시작하면(auth_verifications · social_accounts · 공동 가계부)
 	       여기에 그 테이블을 먼저 지우는 문장을 추가한다. 안 하면 FK 1451 로 그 계정 파기가 실패한다(로그 error, 다음 날 재시도) -->
 	<delete id="deleteTransactionsOf">
 		DELETE FROM personal_transactions
@@ -103,6 +104,11 @@
 
 	<delete id="deleteCategoriesOf">
 		DELETE FROM personal_categories
+		WHERE user_num = #{userNum}
+	</delete>
+	
+	<delete id="deleteRefreshTokensOf">
+		DELETE FROM refresh_tokens
 		WHERE user_num = #{userNum}
 	</delete>
 

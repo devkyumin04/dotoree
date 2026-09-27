@@ -1,9 +1,10 @@
 package com.kyumin.dotoree.mapper;
 
+import java.util.List;
+
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.util.List;
 import com.kyumin.dotoree.domain.User;
 
 @Mapper
@@ -41,6 +42,7 @@ public interface UserMapper {
     void deleteTransactionsOf(@Param("userNum") Integer userNum);
     void deleteChildCategoriesOf(@Param("userNum") Integer userNum);
     void deleteCategoriesOf(@Param("userNum") Integer userNum);
+	void deleteRefreshTokensOf(@Param("userNum") Integer userNum);
     void deleteUser(@Param("userNum") Integer userNum);
 
 }

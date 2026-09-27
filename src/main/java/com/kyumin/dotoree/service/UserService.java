@@ -168,10 +168,11 @@ public class UserService {
             return false;
         }
 
-        // FK 순서 — 거래 → 소분류 → 나머지 카테고리 → 계정 (이유와 "새 테이블이 생기면" 은 UserMapper.xml)
+        // FK 순서 — 거래 → 소분류 → 나머지 카테고리 → Refresh 장부 → 계정 (이유와 "새 테이블이 생기면" 은 UserMapper.xml)
         userMapper.deleteTransactionsOf(userNum);
         userMapper.deleteChildCategoriesOf(userNum);
         userMapper.deleteCategoriesOf(userNum);
+		userMapper.deleteRefreshTokensOf(userNum);
         userMapper.deleteUser(userNum);
         return true;
     }
