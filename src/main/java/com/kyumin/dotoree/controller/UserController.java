@@ -1,6 +1,8 @@
 package com.kyumin.dotoree.controller;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,19 +11,21 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import lombok.RequiredArgsConstructor;
 
 import com.kyumin.dotoree.dto.LoginRequestDto;
 import com.kyumin.dotoree.dto.LoginResponseDto;
+import com.kyumin.dotoree.dto.LoginResult;
+import com.kyumin.dotoree.dto.NicknameRequestDto;
+import com.kyumin.dotoree.dto.PasswordChangeRequestDto;
+import com.kyumin.dotoree.dto.PasswordConfirmRequestDto;
 import com.kyumin.dotoree.dto.SignupRequestDto;
 import com.kyumin.dotoree.dto.SignupResponseDto;
 import com.kyumin.dotoree.dto.UserInfoResponseDto;
-import com.kyumin.dotoree.dto.PasswordConfirmRequestDto;
-import com.kyumin.dotoree.dto.NicknameRequestDto;
-import com.kyumin.dotoree.dto.PasswordChangeRequestDto;
+import com.kyumin.dotoree.service.RefreshTokenService;
 import com.kyumin.dotoree.service.UserService;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/users")
@@ -29,6 +33,7 @@ import jakarta.validation.Valid;
 public class UserController {
 
     private final UserService userService;
+	private final RefreshTokenService refreshTokenService;
 
     @PostMapping("/signup")
     public ResponseEntity<SignupResponseDto> signup(@Valid @RequestBody SignupRequestDto requestDto) {
@@ -41,9 +46,17 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequestDto requestDto) {
 
-        LoginResponseDto responseDto = userService.login(requestDto);
+		LoginResult loginResult = userService.login(requestDto);
+		ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", loginResult.getRawRefreshToken())
+				.httpOnly(true)
+				.secure(true)
+				.sameSite("Strict")
+				.path("/api/auth")
+				.maxAge(refreshTokenService.getRefreshTokenExpiration())
+				.build();
 
-        return ResponseEntity.status(HttpStatus.OK).body(responseDto);
+		return ResponseEntity.status(HttpStatus.OK).header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+				.body(loginResult.getLoginResponse());
     }
     
     @GetMapping("/me")

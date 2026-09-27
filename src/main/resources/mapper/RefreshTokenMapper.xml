@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kyumin.dotoree.mapper.RefreshTokenMapper">
+
+	<insert id="insertRefreshToken" parameterType="com.kyumin.dotoree.domain.RefreshToken">
+		INSERT INTO refresh_tokens (
+			family_id, user_num, token_hash, expires_at
+		)
+		VALUES (
+			#{familyId}, #{userNum}, #{tokenHash}, #{expiresAt}
+		)
+	</insert>
+
+</mapper>

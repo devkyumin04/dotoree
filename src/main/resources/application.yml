@@ -20,6 +20,7 @@ server:
 jwt:
   secret: ${JWT_SECRET}
   access-token-expiration: 15m      # Duration 표기 (15m · 14d). 자바는 Duration 으로 받는다
+  refresh-token-expiration: 14d     # DB EXPIRES_AT 과 쿠키 Max-Age 가 같이 쓴다 (ADR-055)
 
 dotoree:
   purge:

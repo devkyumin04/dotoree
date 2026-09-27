@@ -173,6 +173,9 @@ MySQL 커넥션을 새로 만들고 **두 탭을 나눠** 채운다 — SSH 탭�
 - **스키마 변경(`ALTER` · `CREATE` · `DROP`)을 DBeaver 로 직접 하지 않는다** — 반드시 Flyway `V` 파일로. 손으로 바꾸면 `flyway_schema_history` 와 실제 DB 가 어긋나고, 로컬·CI 에는 없는 변경이 운영에만 남는다
 - **배포 전엔 EC2 커넥션을 끊어 둔다** — 열린 트랜잭션이 Flyway 의 `ALTER` 를 멈춰 새 앱이 안 뜬다(위 "주의")
 
+**알아 둘 것 — Production 확인 창 (2026-09-25)**
+- `SELECT` 는 바로 실행되지만 `SHOW CREATE TABLE` 처럼 **SELECT 가 아닌 명령은 "Confirm query execution" 창**이 뜬다(연결 유형이 Production 이라서). 이 창이 DBeaver 창 **뒤에 숨으면** 쿼리가 멈춘 것처럼 진행 막대만 돈다 → 창을 찾아 Yes/No. "Do not ask" 는 켜지 않는다(실수 방지 장치)
+
 - 앱 계정 비밀번호는 해시로만 저장돼 **다시 꺼내볼 수 없다.** 잃어버리면 `ALTER USER 'ledger_app'@'localhost' IDENTIFIED BY '새 값';` 로 재설정하고 systemd `EnvironmentFile` 도 같이 고친다
 - root 비번을 만들지 않은 이유는 ADR-043
 
@@ -388,3 +391,4 @@ sudo systemctl start ledger-certcheck.service                       # 지금 한
 | 2026-09-23 | EC2 `/etc/nginx/sites-available/ledger.bak-certbot` 삭제 → `nginx -t` ok | 직접 |
 | 2026-09-23 | 운영 DB 확인용 계정 `test@test.com`(2-5 에서 만든 것) 하드 삭제 — 거래·카테고리·계정. 다른 계정에서 support@ 로 보낸 메일 Gmail 수신 확인 | 직접 (DBeaver `ledger_db(EC2)`) |
 | 2026-09-25 | DBeaver `ledger_db(EC2)` 안전 장치 기록 — 읽기 전용 + 수동 커밋(설정은 이전 세션) · Production(빨간 탭) 반영 확인. `SELECT COUNT(*) FROM refresh_tokens` 뒤 열린 트랜잭션을 Rollback → 카운터 `None` 확인 | 직접 (확인은 AI 가 DBeaver 화면으로) |
+| 2026-09-25 | V3 배포 확인 — CI #63 build·qa·deploy 초록(qa 192/192) · health UP · `flyway_schema_history` V3 `success 1`(15:25:50) · `SHOW CREATE TABLE refresh_tokens` 로컬과 일치 → Rollback · Disconnect | AI (내장 브라우저로 Actions 로그 · DBeaver 화면 조작, 사용자 허락) |

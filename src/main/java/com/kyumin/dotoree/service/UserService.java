@@ -4,25 +4,26 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import lombok.RequiredArgsConstructor;
-
-import com.kyumin.dotoree.mapper.PersonalCategoryMapper;
-import com.kyumin.dotoree.mapper.UserMapper;
-import com.kyumin.dotoree.security.JwtTokenProvider;
+import com.kyumin.dotoree.domain.PersonalCategory;
+import com.kyumin.dotoree.domain.User;
 import com.kyumin.dotoree.dto.LoginRequestDto;
 import com.kyumin.dotoree.dto.LoginResponseDto;
-import com.kyumin.dotoree.dto.UserInfoResponseDto;
-import com.kyumin.dotoree.dto.SignupRequestDto;
-import com.kyumin.dotoree.dto.SignupResponseDto;
-import com.kyumin.dotoree.dto.PasswordConfirmRequestDto;
+import com.kyumin.dotoree.dto.LoginResult;
 import com.kyumin.dotoree.dto.NicknameRequestDto;
 import com.kyumin.dotoree.dto.PasswordChangeRequestDto;
+import com.kyumin.dotoree.dto.PasswordConfirmRequestDto;
+import com.kyumin.dotoree.dto.SignupRequestDto;
+import com.kyumin.dotoree.dto.SignupResponseDto;
+import com.kyumin.dotoree.dto.UserInfoResponseDto;
 import com.kyumin.dotoree.exception.DuplicateEmailException;
 import com.kyumin.dotoree.exception.InvalidCredentialsException;
 import com.kyumin.dotoree.exception.PasswordMismatchException;
 import com.kyumin.dotoree.exception.SamePasswordException;
-import com.kyumin.dotoree.domain.PersonalCategory;
-import com.kyumin.dotoree.domain.User;
+import com.kyumin.dotoree.mapper.PersonalCategoryMapper;
+import com.kyumin.dotoree.mapper.UserMapper;
+import com.kyumin.dotoree.security.JwtTokenProvider;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +33,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final PersonalCategoryMapper personalCategoryMapper;
+	private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public SignupResponseDto signup(SignupRequestDto requestDto) {
@@ -77,7 +79,8 @@ public class UserService {
         personalCategoryMapper.insertCategory(category);
     }
     
-    public LoginResponseDto login(LoginRequestDto requestDto) {
+	@Transactional
+	public LoginResult login(LoginRequestDto requestDto) {
 
         User loginUser = userMapper.findByEmail(requestDto.getEmail());
       	
@@ -100,14 +103,14 @@ public class UserService {
         }
 
         userMapper.updateLastLoginAt(loginUser.getUserNum());
-
-       String accessToken = jwtTokenProvider.createAccessToken(loginUser.getUserNum());
+        String rawRefreshToken = refreshTokenService.issueNewFamily(loginUser.getUserNum());
         
-        return new LoginResponseDto(
-            loginUser.getUserNum(),
-            loginUser.getUserEmail(),
-            loginUser.getUserNickname(),
-            accessToken
+		String accessToken = jwtTokenProvider.createAccessToken(loginUser.getUserNum());
+
+		return new LoginResult(
+				new LoginResponseDto(loginUser.getUserNum(), loginUser.getUserEmail(), loginUser.getUserNickname(),
+						accessToken),
+				rawRefreshToken
         );
     }
     
