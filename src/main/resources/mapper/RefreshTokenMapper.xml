@@ -13,4 +13,22 @@
 		)
 	</insert>
 
+	<!-- 재발급 — 쿠키 원문의 해시로 장부 한 줄. 줄만 가져온다: WHERE 는 token_hash 하나(UNIQUE 라 0 또는 1행)
+	     폐기·만료 판정은 자바(RefreshTokenService)에서 — 폐기된 줄도 보여야 재사용 탐지가 된다 (ADR-055)
+	     SELECT * — 도메인이 테이블과 1:1 이라 남는 칸이 없다(다른 매퍼와 같은 규칙) -->
+	<select id="findByTokenHash" resultType="com.kyumin.dotoree.domain.RefreshToken">
+		SELECT *
+		FROM refresh_tokens
+		WHERE token_hash = #{tokenHash}
+	</select>
+
+	<!-- 로테이션 — 찾은 줄(PK)을 폐기. REVOKED_YN · REVOKED_AT 은 같은 UPDATE 에서 (ADR-055). 시각은 자바가 잰 값
+	     AND revoked_yn = 'N' — 동시 재발급이면 먼저 온 쪽만 1행, 늦은 쪽은 0행 → 새 카드가 두 장 생기지 않는다(살아 있는 건 하나) -->
+	<update id="revokeToken">
+		UPDATE refresh_tokens
+		SET revoked_yn = 'Y', revoked_at = #{revokedAt}
+		WHERE token_num = #{tokenNum}
+		AND revoked_yn = 'N'
+	</update>
+
 </mapper>

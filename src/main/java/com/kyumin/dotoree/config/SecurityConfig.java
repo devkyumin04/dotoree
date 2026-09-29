@@ -60,6 +60,7 @@ public class SecurityConfig {
             }))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/users/signup", "/api/users/login").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()   // 재발급·로그아웃 — Access 가 만료된 뒤에 부르므로 열어 둔다. 쿠키 Path=/api/auth 와 같은 범위
                 .requestMatchers("/", "/views/**", "/css/**", "/js/**", "/error/**").permitAll()
                 .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()
                 .anyRequest().authenticated()
