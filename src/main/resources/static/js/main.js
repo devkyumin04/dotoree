@@ -58,7 +58,18 @@ document.querySelectorAll('.bar[data-width]').forEach(bar => {
     bar.style.width = bar.dataset.width + '%';
 });
 
-logoutBtn.addEventListener('click', () => {
+// 로그아웃 — 서버가 장부(Refresh 일행) 폐기 + 쿠키 삭제(HttpOnly 라 JS 는 못 지운다) → 성공하면 Access 도 지우고 메인으로
+// 실패(서버 오류·네트워크)면 아무것도 지우지 않는다 — 장부가 살아 있는데 로그아웃된 것처럼 보이면 다시 누를 이유가 사라진다
+// apiRequest 가 아니라 fetch — Access 가 필요 없고(쿠키가 증명), 401 이면 로그인으로 보내는 처리가 끼면 안 된다
+logoutBtn.addEventListener('click', async () => {
+    try {
+        const response = await fetch('/api/auth/logout', { method: 'POST' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+    } catch (error) {
+        console.error('로그아웃 실패', error);
+        alert('로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+        return;
+    }
     localStorage.removeItem('accessToken');
     window.location.href = '/views/main.html';
 });

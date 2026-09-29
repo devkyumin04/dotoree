@@ -133,4 +133,22 @@ public class RefreshTokenService {
 		}
 	}
 
+	// 로그아웃 — 쿠키로 온 카드의 일행(패밀리) 전체 폐기. 이 기기만 끝낸다(모든 기기는 6단계, ADR-055 선택 2)
+	// 실패하지 않는다(멱등) — 쿠키 없음·장부에 없음이면 할 일 없이 끝. 폐기·만료 검사는 하지 않는다(도둑이 먼저 로테이션해 A 가 이미 Y 여도 B 까지 회수해야 한다)
+	// @Transactional 없음 — 쓰는 문장이 revokeFamily UPDATE 하나뿐(한 문장은 그 자체로 원자적). 묶을 짝이 없다. familyId 는 바뀌지 않는 값이라 읽기와 쓰기 사이에 끼어들어도 무해
+	public void logout(String rawToken) {
+		// 쿠키 없음·빈 값 — 할 일 없이 끝(throw 아님). refresh() 입구와 같은 조건
+		if (rawToken == null || rawToken.isEmpty()) {
+			return;
+		}
+		String tokenHash = hash(rawToken);
+		RefreshToken refreshToken = refreshTokenMapper.findByTokenHash(tokenHash);
+
+		// 장부에 없음(만료 청소로 지워짐 등) — 할 일 없이 끝
+		if (refreshToken == null) {
+			return;
+		}
+		// 카드 상태(폐기·만료)를 묻지 않고 일행 전체 회수. 반환값(바뀐 줄 수)은 버린다 — 0 이어도 성공
+		refreshTokenMapper.revokeFamily(refreshToken.getFamilyId(), LocalDateTime.now());
+	}
 }

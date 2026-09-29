@@ -32,4 +32,14 @@ public class AuthController {
 		return ResponseEntity.status(HttpStatus.OK).header(HttpHeaders.SET_COOKIE, cookie.toString())
 				.body(new RefreshResponseDto(refreshResult.getAccessToken()));
 	}
+	
+	// 로그아웃 — 장부에서 일행 폐기(서비스) → 지우는 쿠키(Max-Age=0, 같은 이름·경로) + 204. 실패하지 않는다(쿠키 없음·장부에 없음도 204)
+	// 서비스가 예외면 쿠키는 안 나간다(return 줄까지 못 감) — 장부가 살아 있는데 쿠키만 지우면 다시 폐기할 방법이 사라지므로 이 순서가 맞다
+	@PostMapping("/logout")
+	public ResponseEntity<Void> logout(@CookieValue(name = "refresh_token", required = false) String rawToken) {
+		refreshTokenService.logout(rawToken);
+		ResponseCookie cookie = refreshCookieProvider.expire();
+
+		return ResponseEntity.status(HttpStatus.NO_CONTENT).header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
+	}
 }

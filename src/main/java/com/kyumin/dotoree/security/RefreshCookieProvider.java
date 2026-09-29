@@ -33,4 +33,15 @@ public class RefreshCookieProvider {
 				.build();
 	}
 
+	// 지우는 쿠키 — 서버는 브라우저 쿠키를 직접 못 지우니 같은 쿠키를 값 없이 Max-Age=0 으로 덮어쓴다(로그아웃)
+	// 브라우저는 이름·도메인·경로로 쿠키를 구분 — 경로가 다르면 덮어쓰지 않고 한 장 더 생긴다. 그래서 create() 와 같은 상수·속성
+	public ResponseCookie expire() {
+		return ResponseCookie.from(COOKIE_NAME)
+				.httpOnly(true)
+				.secure(true)
+				.sameSite("Strict")
+				.path(COOKIE_PATH)
+				.maxAge(0)
+				.build();
+	}
 }
