@@ -41,4 +41,15 @@
 		AND revoked_yn = 'N'
 	</update>
 
+	<!-- 전 세션 폐기 — 비번 변경·탈퇴. 같은 user_num 의 살아 있는 줄을 일행 가리지 않고 한 번에 (ADR-055 선택 16)
+	     WHERE (user_num, revoked_yn) = V1 인덱스 IDX_TOKEN_USER_REVOKED 그대로 탄다
+	     규칙 — 이 파일의 폐기 UPDATE 셋은 revoked_yn 과 revoked_at 을 항상 같이 채운다. 유예 판정이 getRevokedAt() 을 바로 써서 Y 인데 NULL 이면 NPE → 500
+	            DB CHECK(V4)는 보류(2026-09-29) — 폐기 SQL 이 이 파일 밖에 생기면 다시 본다 -->
+	<update id="revokeAllOfUser">
+		UPDATE refresh_tokens
+		SET revoked_yn = 'Y', revoked_at = #{revokedAt}
+		WHERE user_num = #{userNum}
+		AND revoked_yn = 'N'
+	</update>
+
 </mapper>

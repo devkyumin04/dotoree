@@ -151,4 +151,11 @@ public class RefreshTokenService {
 		// 카드 상태(폐기·만료)를 묻지 않고 일행 전체 회수. 반환값(바뀐 줄 수)은 버린다 — 0 이어도 성공
 		refreshTokenMapper.revokeFamily(refreshToken.getFamilyId(), LocalDateTime.now());
 	}
+
+	// 전 세션 폐기 — 비번 변경·탈퇴 때 그 사용자의 카드를 일행 가리지 않고 전부 (ADR-055 선택 16)
+	// 지금 이 기기도 포함 — 비번 변경 뒤엔 화면이 다시 로그인시킨다. 탈퇴는 유예 중('W') 계정이 옛 카드로 재발급받던 구멍을 막는다
+	// @Transactional 없음 — 부르는 쪽(UserService)의 트랜잭션에 들어가 비번·상태 UPDATE 와 같이 커밋·롤백된다
+	public void revokeAllOfUser(Integer userNum) {
+		refreshTokenMapper.revokeAllOfUser(userNum, LocalDateTime.now());
+	}
 }

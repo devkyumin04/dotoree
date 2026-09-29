@@ -131,6 +131,9 @@ public class UserService {
     }
 
     // 현재 비밀번호를 확인한 뒤에만 바꾼다. 토큰이 있어도 비번을 모르면 못 바꾼다 (탈퇴와 같은 이유)
+    // 바꾼 뒤 모든 기기의 Refresh 폐기 — 비번을 바꾸는 흔한 이유가 "누가 내 계정을 쓰는 것 같다"라서, 옛 카드를 든 사람을 같이 내보낸다 (ADR-055 선택 16)
+    // @Transactional — 비번만 바뀌고 폐기가 실패하면 도둑의 카드가 산다. 둘 다 되거나 둘 다 안 되게(실패하면 사용자가 다시 시도)
+    @Transactional
     public void changePassword(Integer userNum, PasswordChangeRequestDto requestDto) {
 
         checkPassword(userNum, requestDto.getCurrentPassword(), "현재 비밀번호가 일치하지 않습니다.");
@@ -144,11 +147,15 @@ public class UserService {
         if (userMapper.updatePassword(userNum, encoded) == 0) {
             throw new InvalidCredentialsException("사용자를 찾을 수 없습니다.");
         }
+        refreshTokenService.revokeAllOfUser(userNum);
     }
 
     // 탈퇴 = 논리적 삭제 + 유예 시작. 30일 뒤 purgeUser 가 물리적으로 지운다 (ADR-052)
     // 감수 — 이미 발급된 액세스 토큰은 만료(15분)까지 유효하다. 필터가 매 요청 DB 를 보지 않기 때문(stateless JWT).
     //        그 사이 쓴 데이터도 유예가 끝나면 같이 지워진다
+    // Refresh 는 전부 폐기 — 안 하면 유예 30일 동안 옛 카드로 재발급이 계속된다(재발급은 계정 상태를 보지 않는다). 다시 쓰려면 로그인 = 탈퇴 취소 (ADR-052·055 선택 16)
+    // @Transactional — 상태만 'W' 가 되고 폐기가 실패하는 반쪽 탈퇴를 막는다
+    @Transactional
     public void withdraw(Integer userNum, PasswordConfirmRequestDto requestDto) {
 
         checkPassword(userNum, requestDto.getPassword(), "비밀번호가 일치하지 않습니다.");
@@ -157,6 +164,7 @@ public class UserService {
         if (userMapper.withdraw(userNum) == 0) {
             throw new InvalidCredentialsException("사용자를 찾을 수 없습니다.");
         }
+        refreshTokenService.revokeAllOfUser(userNum);
     }
 
     // 유예가 끝난 계정 하나를 물리적으로 지운다. 스케줄러가 계정마다 부른다 — 계정 하나가 실패해도 다른 계정은 지워지게 트랜잭션을 계정 단위로

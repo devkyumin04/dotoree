@@ -85,9 +85,13 @@ passwordForm.addEventListener('submit', async (e) => {
     await withButtonLock(passwordBtn, async () => {
         try {
             await apiRequest('/api/users/me/password', 'PUT', { currentPassword: confirmedPassword, newPassword });
-            confirmedPassword = newPassword;   // 한 번 더 바꿀 때를 위해
+            // 서버가 이 기기 카드까지 전부 폐기했다(전 세션 폐기) — 남은 Access 도 지우고 새 비번으로 다시 로그인
+            localStorage.removeItem('accessToken');
             passwordForm.reset();
-            passwordMessage.textContent = '비밀번호를 변경했습니다.';
+            passwordMessage.textContent = '비밀번호를 변경했습니다. 다시 로그인해 주세요.';
+            setTimeout(() => {
+                window.location.href = '/views/user/login.html';
+            }, 2000);
         } catch (error) {
             passwordMessage.textContent = error.message;
         }
