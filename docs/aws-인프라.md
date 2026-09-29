@@ -197,7 +197,7 @@ MySQL 커넥션을 새로 만들고 **두 탭을 나눠** 채운다 — SSH 탭�
 3. 새 `V` 파일이 들어가면 — 오늘 백업이 성공했는가 (Healthchecks.io `ledger-backup` up)
 
 **push 후**
-1. GitHub Actions — `build` · `qa` · `deploy` 셋 다 초록. `qa` 는 원본 로그에서 케이스 수가 줄지 않았는지 (2026-09-25 기준 192)
+1. GitHub Actions — `build` · `qa` · `deploy` 셋 다 초록. `qa` 는 원본 로그에서 케이스 수가 줄지 않았는지 (2026-09-29 기준 223 — `test-refresh.sh` 31 추가)
 2. `https://dotoree.app/actuator/health` 가 UP (UptimeRobot DOWN 메일이 없는가)
 3. `V` 파일이 있었으면 — 운영 `flyway_schema_history` 에 새 버전 `success = 1` (위 "운영 DB 를 만질 때" 대로 조회 → Rollback → Disconnect)
 4. 바꾼 기능을 운영 화면에서 한 번 눌러 본다
