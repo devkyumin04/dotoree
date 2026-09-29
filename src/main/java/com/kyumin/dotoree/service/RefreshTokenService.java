@@ -32,6 +32,10 @@ public class RefreshTokenService {
 	// 원문 길이 32바이트 = 256비트 (ADR-055 선택 7 — OWASP 세션 토큰 기준 128비트 이상)
 	private static final int TOKEN_BYTES = 32;
 
+	// 유예 30초 — 폐기된 카드가 30초 안에 다시 오면 재사용이 아니라 재시도(응답 유실)·탭 두 개 동시 갱신으로 보고 봐준다 (ADR-055 선택 10)
+	// 단, 같은 패밀리에 살아 있는 카드가 있을 때만(②) — 전체 폐기 직후의 부활 시도를 막는다
+	private static final Duration GRACE_PERIOD = Duration.ofSeconds(30);
+
 	// 재발급 실패 문구 하나 — 없음·폐기·만료를 구분해 알려 주지 않는다(어느 쪽인지가 공격자에게 힌트가 된다). 세 곳이 같이 쓴다
 	private static final String REFRESH_FAIL_MESSAGE = "로그인이 만료되었습니다. 다시 로그인해 주세요.";
 
@@ -56,7 +60,9 @@ public class RefreshTokenService {
 
 	// 재발급 = 로테이션 — 옛 카드 폐기 + 같은 일행(familyId)으로 새 카드 + 새 Access. 한 트랜잭션 (ADR-055)
 	// 받는 것: 쿠키 원문 / 돌려주는 것: RefreshResult(새 Access + 새 Refresh 원문). 쿠키 굽기·본문은 컨트롤러가
-	@Transactional
+	// noRollbackFor — 여기서 InvalidCredentials 는 고장이 아니라 "거절". 재사용 탐지로 한 패밀리 폐기는 401 을 내도 남아야 한다(롤백되면 도둑이 새 카드를 들고 남는다)
+	// 다른 거절 경로(없음·만료·동시 재발급 0행)는 던지기 전에 쓴 게 없어 무해. DB 오류 등 다른 예외는 그대로 롤백
+	@Transactional(noRollbackFor = InvalidCredentialsException.class)
 	public RefreshResult refresh(String rawToken) {
 
 		if (rawToken == null || rawToken.isEmpty()) {
@@ -70,7 +76,19 @@ public class RefreshTokenService {
 			throw new InvalidCredentialsException(REFRESH_FAIL_MESSAGE);
 		}
 		if ("Y".equals(refreshToken.getRevokedYn())) {
-			// 4단계: 재사용 탐지(패밀리 전체 폐기) · 유예 30초로 바뀜 (ADR-055)
+			// 폐기된 카드가 다시 옴 — 재사용 탐지 · 유예 (ADR-055 선택 1·10)
+			// 회수(revokeFamily)를 판정보다 먼저: 도둑이든 재시도든 일행의 살아 있는 카드는 치우고, 그 장수(aliveCount)가 있어야 재시도(1 이상)와 부활 시도(0)를 가른다
+			// now 하나를 폐기 시각과 30초 판정에 같이 쓴다(같은 시계)
+			LocalDateTime now = LocalDateTime.now();
+			int aliveCount = refreshTokenMapper.revokeFamily(refreshToken.getFamilyId(), now);
+			if (aliveCount > 0 && refreshToken.getRevokedAt().plus(GRACE_PERIOD).isAfter(now)) {
+				// 유예 — 같은 일행으로 새 카드 한 장(나머지는 방금 회수해서 살아 있는 건 이것 하나). 옛 카드는 이미 폐기라 revokeToken 없음
+				// 아래 정상 재발급 세 줄과 같은 모양 — 세 번째 복제가 생기면 메서드로 뺀다(ADR-041)
+				String rawRefreshToken = issue(refreshToken.getUserNum(), refreshToken.getFamilyId());
+				String accessToken = jwtTokenProvider.createAccessToken(refreshToken.getUserNum());
+				return new RefreshResult(accessToken, rawRefreshToken);
+			}
+			// 재사용 탐지 — 일행 전체가 폐기된 채로 커밋된다(noRollbackFor). 주인은 비번으로 다시 로그인
 			throw new InvalidCredentialsException(REFRESH_FAIL_MESSAGE);
 		}
 		if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {

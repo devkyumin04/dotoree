@@ -31,4 +31,14 @@
 		AND revoked_yn = 'N'
 	</update>
 
+	<!-- 재사용 탐지·유예 — 같은 family_id 중 살아 있는 줄을 한 번에 폐기 (ADR-055 선택 1·10)
+	     AND revoked_yn = 'N' — 바뀐 줄 수 = 폐기 직전까지 살아 있던 줄 수. 0행 = 이미 전부 폐기됨 → 유예 ② 실패(서비스가 401)
+	     "살아 있나 세기"와 "폐기"를 UPDATE 하나로 — SELECT COUNT 뒤 UPDATE 로 나누면 그 사이에 다른 요청이 끼어든다(check-then-act) -->
+	<update id="revokeFamily">
+		UPDATE refresh_tokens
+		SET revoked_yn = 'Y', revoked_at = #{revokedAt}
+		WHERE family_id = #{familyId}
+		AND revoked_yn = 'N'
+	</update>
+
 </mapper>
