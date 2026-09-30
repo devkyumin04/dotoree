@@ -46,7 +46,13 @@ AWS 콘솔에서 **무엇을 어떤 값으로 만들었고 왜 그랬는지**. �
 | 외부 감시 | **UptimeRobot** 무료 (2026-09-22, AWS 밖) | 키워드 모니터 `ledger-health` — `https://dotoree.app/actuator/health` 본문에 `"status":"UP"` 이 **없으면** DOWN, 5분 간격, 북미에서. 알림 이메일만. SSL 만료·heartbeat·상태 코드 선택은 유료라 안 씀(트러블슈팅 20). 계정 2FA(TOTP) |
 | 작업 감시 | **Healthchecks.io** 무료 (2026-09-22, AWS 밖) | 체크 `ledger-backup` · `ledger-cert` — 둘 다 Period 1일 + Grace 1시간, 알림 이메일. 실패 핑은 즉시, 무응답은 25시간 뒤 메일. 계정 2FA(TOTP, 복구 코드 없음), 시간대 Asia/Seoul |
 | SES 발신 도메인 | `dotoree.app` 도메인 자격 증명 (2026-09-22, 서울) | **도메인 단위** — `noreply@`·`support@` 등 이 도메인의 어떤 주소로든 보낸다(이메일 주소 단위는 그 주소 하나만). **Easy DKIM**(RSA 2048) — SES 가 준 CNAME 3개를 Cloudflare 에(DNS only, 이름은 `…._domainkey` 까지만 — Cloudflare 가 도메인을 붙인다). Route 53 자동 게시는 끔(DNS 가 Cloudflare). 사용자 지정 MAIL FROM 없음 — DMARC 정렬은 DKIM 으로 충족. 기본 구성 세트·테넌트 없음. **발송 권한(역할 정책)은 아직 안 붙임** — 이메일 인증 기능을 만들 때 `ledger-prod-ec2` 에 정책 추가. 계정은 **샌드박스**(검증된 수신자만 · 하루 200통 · 초당 1통) → 해제 신청은 아래 이력 |
-| 메일 받기 (support@) | Cloudflare **Email Routing** (2026-09-23, AWS 밖) | `support@dotoree.app` → 개인 Gmail 로 전달(받기 전용, 보내기는 SES). 계정 단위 메뉴 Compute → Email Service → Email Routing. Cloudflare 가 MX 3줄(`route1~3.mx.cloudflare.net`) · 루트 SPF TXT(`include:_spf.mx.cloudflare.net`) · DKIM TXT(`cf2024-1._domainkey`)를 추가. SES 는 SPF 를 amazonses.com 으로 처리하고 DKIM 이름이 달라 충돌 없음. 전달 대상 주소는 저장소에 적지 않는다 |
+| ~~메일 받기 (support@)~~ | ~~Cloudflare **Email Routing** (2026-09-23, AWS 밖)~~ → **2026-09-30 SES 수신으로 교체(아래). Email Routing 은 끔 — 도메인 온보딩 해제, Cloudflare 가 넣었던 MX 3줄·SPF TXT·DKIM `cf2024-1` 삭제 확인.** 새 DNS: `MX @ 10 inbound-smtp.ap-northeast-2.amazonaws.com`(DNS only). 루트 SPF TXT 는 지금 없음(받기엔 불필요, 보내기는 SES 가 amazonses.com MAIL FROM 으로 처리) | `support@dotoree.app` → 개인 Gmail 로 전달(받기 전용, 보내기는 SES). 계정 단위 메뉴 Compute → Email Service → Email Routing. Cloudflare 가 MX 3줄(`route1~3.mx.cloudflare.net`) · 루트 SPF TXT(`include:_spf.mx.cloudflare.net`) · DKIM TXT(`cf2024-1._domainkey`)를 추가. SES 는 SPF 를 amazonses.com 으로 처리하고 DKIM 이름이 달라 충돌 없음. 전달 대상 주소는 저장소에 적지 않는다 |
+| S3 버킷 (문의 메일함) | `<S3_MAIL_BUCKET>` = `ledger-mail` + 계정 리전 접미사 (2026-09-30) | 서울 · 범용 · **계정 리전 네임스페이스**(백업 버킷과 같은 방식) · 퍼블릭 전부 차단 · 버전 관리 **끔**(메일은 고칠 일이 없다) · SSE-S3 · ACL 비활성. **왜** — 문의 메일을 Gmail(미국)이 아니라 **국내(서울)에 보관**해 국외 이전 자체를 없앤다(처리방침·시행령 제29조의10 DPA 문제, 진행상황 "DPA 재검토") |
+| S3 수명 주기 규칙 | `inbox-expire` (2026-09-30) | 접두사 `inbox/` · 현재 버전 **90일** 만료 · 불완전 멀티파트 7일. 처리방침의 보관 기간과 맞물려 **수동 삭제가 필요 없다** |
+| S3 버킷 정책 | `AllowSESPutsFromLedgerInbound` (2026-09-30) | 주체 `ses.amazonaws.com` 만 `s3:PutObject`, 리소스 `inbox/*`, 조건 `aws:SourceAccount` = 우리 계정 + `ArnLike aws:SourceArn` = `receipt-rule-set/ledger-inbound:receipt-rule/*`. 다른 계정의 SES 가 우리 버킷에 쓰는 것(confused deputy)을 막는다. 콘솔 정책 검사기가 `StringLike` → `ArnLike` 를 권해 그대로 |
+| SES 수신 규칙 세트 | `ledger-inbound` — **활성** (2026-09-30, 서울) | 규칙 `support-to-s3`: 수신자 **`support@dotoree.app` 하나만**(다른 주소로 온 메일은 거절) · 스팸·바이러스 검사 켬 · TLS 선택(필수로 하면 TLS 없는 발신 서버 메일이 통째로 거절) · 작업 S3 저장 `<S3_MAIL_BUCKET>/inbox/`(파일 이름은 SES 의 무작위 ID). **SES 자체 SNS 알림은 안 붙임** — 그 알림엔 보낸 사람 주소·제목이 담겨 Gmail 로 가면 국외 이전이 되살아난다. 알림은 S3 이벤트(파일 이름만)로 따로. 생성 직후 SES 가 `inbox/AMAZON_SES_SETUP_NOTIFICATION` 을 써서 권한을 확인한다. **MX 를 SES 로 돌리기 전까지는 메일이 오지 않는다**(Cloudflare 3단계) |
+| SNS 주제 (새 메일 알림) | `ledger-mail-notify` (2026-09-30, 서울, 표준) | 주제 정책 — 기본 문(소유 계정만) + `AllowS3MailBucketPublish`: 주체 `s3.amazonaws.com` 만 `SNS:Publish`, 조건 `aws:SourceAccount` = 우리 계정 + `ArnLike aws:SourceArn` = `<S3_MAIL_BUCKET>`. 구독 1개 — 이메일(개인 메일, 주소는 저장소에 적지 않는다), **구독 확인 링크를 눌러야 동작** |
+| S3 이벤트 알림 | `inbox-new-mail` (2026-09-30) | `<S3_MAIL_BUCKET>` · 접두사 `inbox/` · `s3:ObjectCreated:Put` → `ledger-mail-notify`. **왜 SES 의 SNS 알림이 아니라 S3 이벤트인가** — SES 알림엔 보낸 사람 주소·제목이 들어가 개인 메일(Gmail, 미국)로 가면 국외 이전이 되살아난다. S3 이벤트 JSON 엔 버킷·파일 이름(무작위 ID)·크기·시각뿐 |
 | DMARC | `_dmarc` TXT `v=DMARC1; p=none;` (2026-09-22, Cloudflare) | 인증 실패 메일을 **막지 않고 보기만**. 설정 실수로 우리 메일까지 사라지지 않게 `none` 으로 시작하고, 메일이 몇 주 문제없이 나가면 `quarantine` 으로 올린다. 보고서 수신(`rua`)은 받을 메일함이 생기면 |
 | 예산 알림 | `ledger-monthly` 월 $30 | 실제 85% · 100% 도달, 예상 100% 도달 시 메일. **알림만 — 과금을 멈추지는 않는다** |
 
@@ -313,7 +319,20 @@ sudo systemctl start ledger-certcheck.service                       # 지금 한
 
 ### 전부 지울 때 (프로젝트 종료)
 
-인스턴스 종료 → **탄력적 IP 릴리스** → 보안 그룹 · 키 페어 삭제 → 예산 삭제. 탄력적 IP 를 빼먹으면 매달 과금이 남는다.
+> **2026-09-30 결정 — 취업하면 서비스 종료.** 인프라·배포·CI/CD 만 걷어 과금을 끊고, **코드와 저장소는 그대로 둔다**(나중에 재활용). AI 에게 위임해 이 순서대로 진행 — 되돌릴 수 없는 삭제라 **단계마다 확인받고** 실행. Cloudflare 는 봇 검사로 AI 브라우저 로그인이 안 돼 본인이 직접.
+
+순서는 "데이터 챙기기 → 들어오는 문 닫기 → 돈 나가는 것 → 나머지" (과금은 EC2·EIP·디스크가 거의 전부)
+
+1. **챙기기** — 마지막 DB 백업을 S3 에서 맥으로 내려받아 저장소 밖 개인 보관처에(재활용 때 스키마·시연 데이터 참고용). 문의 메일함에 남은 메일 확인
+2. **사용자에게 알리기** — 사용자가 있으면 처리방침 "종료 시 파기" 대로 공지 → 종료일에 운영 DB 파기(인스턴스 종료로 디스크째 삭제)
+3. **CI/CD 멈추기 (GitHub)** — `ci.yml` 의 deploy 잡 제거 또는 Actions 비활성화 → Secrets 삭제(EC2 호스트·배포 키·역할 ARN 등, 목록은 아래 "비밀 · 식별자 목록표"). 저장소는 공개 그대로(포트폴리오)
+4. **EC2** — `ledger-prod` 종료 → **탄력적 IP 릴리스**(빼먹으면 매달 과금) → 보안 그룹 `launch-wizard-1` · 키 페어 삭제. 디스크(30GB)는 종료 시 같이 삭제되는지 확인
+5. **S3** — 백업 버킷 · 문의 메일함 버킷 비우고 삭제(버전 관리 켜진 백업 버킷은 이전 버전까지)
+6. **SES · SNS** — 수신 규칙 세트 `ledger-inbound` 비활성 → 삭제, 도메인 자격 증명 `dotoree.app` 삭제, SNS 주제 `ledger-mail-notify` 삭제
+7. **IAM** — 역할 `ledger-github-deploy` · `ledger-prod-ec2`, 정책 `ledger-deploy-sg-ssh` · `ledger-backup-s3-put`, OIDC 제공업체 삭제. `ledger-admin`(사람) 계정은 마지막에 판단
+8. **Cloudflare (본인)** — DNS 레코드 정리, 도메인 `dotoree.app` **자동 갱신 끄기**(다음 갱신 2027-09 전에). 도메인을 살려 둘지는 그때 결정
+9. **외부 감시** — UptimeRobot · Healthchecks.io 모니터 삭제(안 지우면 DOWN 메일이 계속 온다)
+10. **확인** — 다음 달 청구서 $0 확인 뒤 예산 알림 `ledger-monthly` 삭제. 이 문서 "작업 이력" 에 한 줄
 
 ## 키 파일 보관
 
@@ -392,3 +411,6 @@ sudo systemctl start ledger-certcheck.service                       # 지금 한
 | 2026-09-23 | 운영 DB 확인용 계정 `test@test.com`(2-5 에서 만든 것) 하드 삭제 — 거래·카테고리·계정. 다른 계정에서 support@ 로 보낸 메일 Gmail 수신 확인 | 직접 (DBeaver `ledger_db(EC2)`) |
 | 2026-09-25 | DBeaver `ledger_db(EC2)` 안전 장치 기록 — 읽기 전용 + 수동 커밋(설정은 이전 세션) · Production(빨간 탭) 반영 확인. `SELECT COUNT(*) FROM refresh_tokens` 뒤 열린 트랜잭션을 Rollback → 카운터 `None` 확인 | 직접 (확인은 AI 가 DBeaver 화면으로) |
 | 2026-09-25 | V3 배포 확인 — CI #63 build·qa·deploy 초록(qa 192/192) · health UP · `flyway_schema_history` V3 `success 1`(15:25:50) · `SHOW CREATE TABLE refresh_tokens` 로컬과 일치 → Rollback · Disconnect | AI (내장 브라우저로 Actions 로그 · DBeaver 화면 조작, 사용자 허락) |
+| 2026-09-30 | 문의 메일 국내 수신 1~2단계 — S3 `<S3_MAIL_BUCKET>` 생성(계정 리전 네임스페이스 · 버전 끔) → 수명 주기 `inbox-expire`(inbox/ 90일 · 멀티파트 7일) → 버킷 정책(SES 만 PutObject, SourceAccount·SourceArn) → SES 수신 규칙 세트 `ledger-inbound` + 규칙 `support-to-s3`(support@ → S3 inbox/, 스팸 검사) → 활성으로 설정 → `inbox/AMAZON_SES_SETUP_NOTIFICATION` 생성 확인. 겪은 것 — 첫 규칙 생성이 `Could not write to bucket`: 콘솔 코드 편집기에 스크립트로 넣은 정책이 **빈 정책으로 저장**돼 있었다(편집기 붙여넣기로 다시 저장하니 통과). 정책 검사기 지적 `StringLike`→`ArnLike` 반영 | AI (내장 브라우저, 본인 요청 위임 — 단계마다 값 확인 뒤 실행) |
+| 2026-09-30 | 3~4단계 — Cloudflare Email Routing 끄기(도메인 온보딩 해제 + Cloudflare DNS 레코드 삭제) → `MX @ 10 inbound-smtp.ap-northeast-2.amazonaws.com` 추가 → 공개 DNS 로 옛 MX 3줄 사라짐 확인(새 MX 는 "없음" 응답이 SOA 최소 1800초 캐시돼 늦게 보임) → 개인 메일로 `support@` 테스트 → S3 `inbox/` 에 3.9KB 객체 도착(3분 안), 헤더 `Received: inbound-smtp.ap-northeast-2` · `X-SES-Spam-Verdict: PASS` · `X-SES-Virus-Verdict: PASS` | Cloudflare 는 직접(AI 가 Safari 화면·DNS 로 확인) / S3 확인은 AI |
+| 2026-09-30 | 5단계 새 메일 알림 — SNS 주제 `ledger-mail-notify`(표준, 정책에 S3 게시 문 추가) → 이메일 구독 생성(확인 대기) → S3 이벤트 알림 `inbox-new-mail`(inbox/ · Put → 주제). 겪은 것 — 콘솔 드롭다운 선택이 스크립트 클릭으론 반영 안 돼 "SNS 주제를 선택해야 합니다" → "ARN 입력" 방식으로 저장 | AI (내장 브라우저, 본인 요청 위임) |
