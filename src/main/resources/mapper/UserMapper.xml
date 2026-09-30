@@ -36,6 +36,27 @@
 		WHERE user_num = #{userNum}
 	</update>
 
+	<!-- ── 로그인 잠금 (ADR-057). 잠금 시각은 자바가 계산해 넘긴다 — 30분이 서비스 상수 한 곳에 있고 시계가 하나(JVM) -->
+	<update id="increaseLoginFailCount">
+		UPDATE users
+		SET login_fail_count = login_fail_count + 1
+		WHERE user_num = #{userNum}
+	</update>
+
+	<!-- 횟수가 차면 잠근다. 판정을 WHERE 에 두는 이유 — 자바가 읽은 옛 횟수로 판정하면 동시 실패 사이에 한 번이 샌다 (check-then-act) -->
+	<update id="lockIfFailedTooMany">
+		UPDATE users
+		SET locked_until = #{lockedUntil}
+		WHERE user_num = #{userNum}
+		  AND login_fail_count &gt;= #{maxFailCount}
+	</update>
+
+	<update id="resetLoginFail">
+		UPDATE users
+		SET login_fail_count = 0, locked_until = NULL
+		WHERE user_num = #{userNum}
+	</update>
+
 	<!-- ── 마이페이지 ───────────────────────────────────── -->
 	<update id="updateNickname">
 		UPDATE users

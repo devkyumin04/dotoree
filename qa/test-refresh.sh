@@ -54,12 +54,7 @@ needck() { # jar 설명 — 카드가 실제로 jar 에 들어왔는가. 없으�
   [ -n "$(ck "$1")" ] || { echo "❌ 기준 데이터 실패 ($2): jar 에 refresh_token 없음"; exit 1; }
 }
 access() { sed 's/.*"accessToken":"\([^"]*\)".*/\1/' "$J/b"; }         # 직전 응답 본문의 Access (t() 가 쓰는 TOKEN)
-# eq · dbv — test-withdraw.sh 와 같은 것. 세 번째 복제가 생기면 _lib.sh 로 (ADR-041)
-eq() { # label 기대값 실제값
-  if [ "$2" = "$3" ]; then PASS=$((PASS+1)); printf "✅ %-6s %s\n" "$1" "$2"
-  else FAIL=$((FAIL+1)); printf "❌ %-6s expected [%s] got [%s]\n" "$1" "$2" "$3"; fi
-}
-dbv() { qa_mysql -N -e "$1" | tr '\t\n' '  ' | sed 's/ *$//'; }
+# eq · dbv 는 _lib.sh (세 번째 복제 test-login-lock 때 이동, 2026-09-30)
 
 # ── 준비: 전용 계정
 E="qa-rt-$(date +%s)@test.com"

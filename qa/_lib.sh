@@ -107,6 +107,14 @@ has() { # label 기대문자열   — 직전 LAST 검사
   else FAIL=$((FAIL+1)); printf "❌ %-6s '%s' 없음  → %s\n" "$1" "$2" "$body"; fi
 }
 
+# ── 값 비교 · DB 한 줄 ────────────────────────────────────
+# test-withdraw → test-refresh 에 복제돼 있던 것을 세 번째(test-login-lock)가 생길 때 여기로 (ADR-041, 2026-09-30)
+eq() { # label 기대값 실제값
+  if [ "$2" = "$3" ]; then PASS=$((PASS+1)); printf "✅ %-6s %s\n" "$1" "$2"
+  else FAIL=$((FAIL+1)); printf "❌ %-6s expected [%s] got [%s]\n" "$1" "$2" "$3"; fi
+}
+dbv() { qa_mysql -N -e "$1" | tr '\t\n' '  ' | sed 's/ *$//'; }   # 결과를 한 줄로 — 칸(탭)·줄(개행) 모두 공백으로
+
 # ── 값 꺼내기 ─────────────────────────────────────────────
 jnum() { echo "$LAST" | sed '$d' | sed "s/.*\"$1\":\([0-9]*\).*/\1/"; }   # LAST 에서 필드명으로
 num() { echo "$1" | sed '$d' | sed 's/.*"categoryNum":\([0-9]*\).*/\1/'; } # 넘겨받은 응답에서 categoryNum

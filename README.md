@@ -41,11 +41,11 @@ flowchart LR
     A --> D[(MySQL)]
     D -. 매일 04:00 덤프 .-> S3B[(S3 백업<br/>30일 보관)]
     M[문의 메일] --> SES[SES 수신 · 서울] --> S3M[(S3 메일함<br/>90일 보관)]
-    G[GitHub Actions] -->|build → qa 223케이스 → deploy<br/>OIDC 임시 자격| A
+    G[GitHub Actions] -->|build → qa 257케이스 → deploy<br/>OIDC 임시 자격| A
 ```
 
 - 화면과 API 를 한 프로세스가 서빙합니다(별도 프론트 서버 없음). 계산·판단은 서버, 화면은 표시만 합니다.
-- `main` 에 push 하면 **curl 회귀 테스트 223케이스**가 일회용 MySQL 에서 돌고, 하나라도 실패하면 배포되지 않습니다.
+- `main` 에 push 하면 **curl 회귀 테스트 257케이스**가 일회용 MySQL 에서 돌고, 하나라도 실패하면 배포되지 않습니다.
 
 ## 깊게 판 것
 

@@ -20,11 +20,7 @@ ask_reset
 
 W=/api/users/withdraw
 
-eq() { # label 기대값 실제값
-  if [ "$2" = "$3" ]; then PASS=$((PASS+1)); printf "✅ %-6s %s\n" "$1" "$2"
-  else FAIL=$((FAIL+1)); printf "❌ %-6s expected [%s] got [%s]\n" "$1" "$2" "$3"; fi
-}
-dbv() { qa_mysql -N -e "$1" | tr '\t\n' '  ' | sed 's/ *$//'; }   # 결과를 한 줄로 — 칸(탭)·줄(개행) 모두 공백으로
+# eq · dbv 는 _lib.sh (2026-09-30 이동)
 
 # ── 준비: 새 계정 둘 (E1 = 주인공, E2 = 유예 중으로 남겨 둘 대조군)
 STAMP=$(date +%s)

@@ -17,11 +17,43 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice(annotations = RestController.class)
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(DuplicateEmailException.class)
-    public ResponseEntity<String> handleDuplicateEmail(DuplicateEmailException e) {
+    // ── 도메인 예외 — 의미별 부모 4개로 받는다 (ADR-041, 2026-09-30). 자식(CategoryNotFound …)은 부모를 상속만 하고
+    //    핸들러를 갖지 않는다 → 새 예외가 생겨도 여기는 안 는다. 자식 클래스명은 유지 — 로그에서 출처 식별 (ADR-035)
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<String> handleNotFound(NotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<String> handleForbidden(ForbiddenException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<String> handleConflict(ConflictException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
     }
-    
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<String> handleBadRequest(BadRequestException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+    }
+
+    // 401 은 자식이 하나뿐이라 부모 없이 그대로 (YAGNI)
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<String> handleInvalidCredentials(InvalidCredentialsException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+    }
+
+    // 423 — 로그인 잠금 (ADR-057). 상태가 하나뿐이라 부모 없음
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<String> handleAccountLocked(AccountLockedException e) {
+        return ResponseEntity.status(HttpStatus.LOCKED).body(e.getMessage());
+    }
+
+    // ── 스프링 예외 — 문구가 각각 달라 하나씩 ─────────────────────────────
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<String> handleValidation(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
@@ -30,56 +62,6 @@ public class GlobalExceptionHandler {
                 .orElse("입력값이 올바르지 않습니다.");
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
-    }
-    
-    @ExceptionHandler(InvalidCredentialsException.class)
-    public ResponseEntity<String> handleInvalidCredentials(InvalidCredentialsException e) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
-    }
-    
-    @ExceptionHandler(PasswordMismatchException.class)
-    public ResponseEntity<String> handlePasswordMismatch(PasswordMismatchException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-    }
-
-    @ExceptionHandler(SamePasswordException.class)
-    public ResponseEntity<String> handleSamePassword(SamePasswordException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-    }
-
-    @ExceptionHandler(CategoryNotFoundException.class)
-    public ResponseEntity<String> handleCategoryNotFound(CategoryNotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-    }
-
-    @ExceptionHandler(InvalidCategoryAccessException.class)
-    public ResponseEntity<String> handleInvalidCategoryAccess(InvalidCategoryAccessException e) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-    }
-    
-    @ExceptionHandler(ReservedCategoryNameException.class)
-    public ResponseEntity<String> handleReservedCategoryNameException(ReservedCategoryNameException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-    }
-    
-    @ExceptionHandler(InvalidCategoryHierarchyException.class)
-    public ResponseEntity<String> handleInvalidCategoryHierarchy(InvalidCategoryHierarchyException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-    }
-
-    @ExceptionHandler(TransactionNotFoundException.class)
-    public ResponseEntity<String> handleTransactionNotFound(TransactionNotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-    }
-
-    @ExceptionHandler(InvalidTransactionAccessException.class)
-    public ResponseEntity<String> handleInvalidTransactionAccess(InvalidTransactionAccessException e) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-    }
-
-    @ExceptionHandler(TransactionConflictException.class)
-    public ResponseEntity<String> handleTransactionConflict(TransactionConflictException e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
