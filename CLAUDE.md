@@ -1,6 +1,6 @@
 # 도토리 (dotoree)
 
-> 프로젝트 이름 **도토리(dotoree)** — 코드·빌드 이름은 `dotoree`. 저장소·서버·DB·AWS 의 `ledger`(`ledger.service`·`ledger_db`·`ledger-prod` …)는 **내부 코드명으로 그대로 둔다** (ADR-054)
+> 프로젝트 이름 **도토리(dotoree)** — 코드·빌드·**GitHub 저장소**(`devkyumin04/dotoree`, 2026-09-30)는 `dotoree`. 서버·DB·AWS 의 `ledger`(`ledger.service`·`ledger_db`·`ledger-prod` …)는 **내부 코드명으로 그대로 둔다** — 사용자 눈에 안 보이고 취업 뒤 서비스를 내릴 때 지울 것들 (ADR-054)
 
 AI 영수증 인식 및 지도 기반 개인·공동 가계부. 24시간 상시 운영 실서비스를 목표로 개발 중.
 
