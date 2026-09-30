@@ -4,6 +4,11 @@
 
 🔗 **https://dotoree.app** (가입해서 바로 써 볼 수 있습니다)
 
+<p>
+  <img src="docs/images/transactions.png" alt="거래 화면 — 월별 수입·지출·잔액과 거래 목록" width="360">
+  <img src="docs/images/statistics.png" alt="통계 화면 — 카테고리 봉투와 수입 대비 지출" width="360">
+</p>
+
 > 지금은 **Sprint 1(개인 가계부 + 인증 + 배포·운영)** 단계입니다. 영수증·결제내역 캡처 AI 분석(Sprint 2~3), 공동 가계부·정산(Sprint 4), 지도·PWA(Sprint 5)는 설계를 마치고 순서대로 만들고 있습니다.
 
 ---
