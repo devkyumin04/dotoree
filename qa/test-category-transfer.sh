@@ -161,5 +161,5 @@ echo
 summary
 echo
 echo "── 수동 확인 (9번: 삭제된 거래의 version 불변) ──"
-echo "mysql -u root -p ledger_db -e \"SELECT trans_num, category_num, version, use_yn FROM personal_transactions WHERE trans_num IN ($T9A, $T9B);\""
+echo "mysql -u root -p dotoree -e \"SELECT trans_num, category_num, version, use_yn FROM personal_transactions WHERE trans_num IN ($T9A, $T9B);\""
 echo "기대: $T9A → category_num=$DEF_E, version=1, use_yn=Y / $T9B → category_num=$C9(이관 안 됨), version=1, use_yn=N"

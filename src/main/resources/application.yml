@@ -3,7 +3,7 @@ spring:
     name: dotoree
 
   datasource:
-    url: jdbc:mysql://localhost:3306/ledger_db #local, github actions, ec2 전부 각 컴퓨터 자신의 MySQL을 가리키므로 환경변수 처리 제외
+    url: jdbc:mysql://localhost:3306/dotoree #local, github actions, ec2 전부 각 컴퓨터 자신의 MySQL을 가리키므로 환경변수 처리 제외
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver

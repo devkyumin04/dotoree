@@ -1,0 +1,10 @@
+# 서버 위치 /etc/systemd/system/dotoree-backup.service. 정본은 저장소 ops/ (ADR-050)
+[Unit]
+Description=dotoree backup
+After=mysql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/dotoree-backup
+Nice=10
+IOSchedulingClass=idle

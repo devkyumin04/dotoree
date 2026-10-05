@@ -1,0 +1,8 @@
+# 서버 위치 /etc/systemd/system/dotoree-certcheck.service. 정본은 저장소 ops/ (ADR-051)
+[Unit]
+Description=TLS certificate expiry check
+After=nginx.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/dotoree-certcheck

@@ -1,7 +1,7 @@
-# 서버 위치 /etc/systemd/system/ledger-backup.timer. 정본은 저장소 ops/ (ADR-050)
+# 서버 위치 /etc/systemd/system/dotoree-backup.timer. 정본은 저장소 ops/ (ADR-050)
 # OnCalendar 는 OS 타임존(KST) 기준. Persistent — 04:00 에 꺼져 있었으면 켜지는 즉시 밀린 실행
 [Unit]
-Description=ledger_db backup daily
+Description=dotoree backup daily
 
 [Timer]
 OnCalendar=*-*-* 04:00:00

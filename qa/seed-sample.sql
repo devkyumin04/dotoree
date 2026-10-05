@@ -1,6 +1,6 @@
 -- 통계 개발·인덱스 실습용 더미 데이터
 --
--- 사용법:  mysql -u root -p ledger_db < qa/seed-sample.sql
+-- 사용법:  mysql -u root -p dotoree < qa/seed-sample.sql
 -- 전제:    test@test.com 계정이 이미 있어야 한다 (미분류 E/I 포함)
 --          없으면 먼저  sh qa/reset-all.sh
 --
@@ -9,7 +9,7 @@
 --   · 최근 6개월치 거래 약 4,000건 (날짜·금액·카테고리 랜덤)
 --   · 대분류에 직접 달린 거래도 섞음 (소분류뷰 '기타' 케이스 확인용)
 --
--- 다시 돌리려면 먼저  mysql -u root -p ledger_db < qa/reset-data.sql
+-- 다시 돌리려면 먼저  mysql -u root -p dotoree < qa/reset-data.sql
 
 SET @U = (SELECT user_num FROM users WHERE user_email = 'test@test.com');
 

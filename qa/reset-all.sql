@@ -2,8 +2,8 @@
 -- (Flyway 이력 flyway_schema_history 는 건드리지 않으므로 마이그레이션 재실행 없음)
 --
 -- 사용법:
---   mysql -u root -p ledger_db < qa/reset-all.sql
---   또는 mysql 접속 후:  source ~/git/ledger/qa/reset-all.sql
+--   mysql -u root -p dotoree < qa/reset-all.sql
+--   또는 mysql 접속 후:  source ~/git/dotoree/qa/reset-all.sql
 --
 -- 실행 후 반드시 계정을 다시 만들 것.
 -- 회원가입 API 를 통해야 '미분류' 카테고리(E/I)가 자동 생성된다.
@@ -22,7 +22,7 @@ TRUNCATE TABLE merchant_profiles;
 TRUNCATE TABLE expense_logs;
 TRUNCATE TABLE settlement_snapshots;
 TRUNCATE TABLE group_transactions;
-TRUNCATE TABLE ledger_periods;
+TRUNCATE TABLE group_periods;
 TRUNCATE TABLE group_merchant_profiles;
 TRUNCATE TABLE group_categories;
 TRUNCATE TABLE group_members;

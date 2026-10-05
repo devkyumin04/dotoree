@@ -1,11 +1,11 @@
 #!/bin/bash
 # 인증서 만료 감시 — Nginx 가 지금 내보내는 인증서가 21일 넘게 남았으면 성공 핑, 아니면 실패 핑. ADR-051
-# 정본은 저장소 ops/. 서버 설치 위치 /usr/local/sbin/ledger-certcheck (root:root 700), 실행은 ledger-certcheck.timer
+# 정본은 저장소 ops/. 서버 설치 위치 /usr/local/sbin/dotoree-certcheck (root:root 700), 실행은 dotoree-certcheck.timer
 # 파일(/etc/letsencrypt)이 아니라 443 에 실제로 붙어 보는 이유 — 갱신은 됐는데 Nginx reload 가 안 된 경우도 잡으려고
 # certbot 은 만료 30일 전부터 갱신한다 → 21일이 남았는데 그대로면 9일 동안 갱신이 실패한 것
 set -euo pipefail
 
-source /etc/ledger/backup.env   # HC_CERT_URL (비밀, ADR-048)
+source /etc/dotoree/backup.env   # HC_CERT_URL (비밀, ADR-048)
 
 DOMAIN=dotoree.app
 DAYS=21

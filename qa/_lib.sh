@@ -25,9 +25,9 @@ PASS=0; FAIL=0; LAST=""
 # MYSQL_PWD 로 넘긴다 — 인자로 주면 프로세스 목록에 보이고 mysql 이 경고를 찍는다.
 qa_mysql() {
   if [ -n "$QA_DB_PASSWORD" ]; then
-    MYSQL_PWD="$QA_DB_PASSWORD" mysql ${QA_DB_HOST:+-h "$QA_DB_HOST"} -u "${QA_DB_USER:-root}" ledger_db "$@"
+    MYSQL_PWD="$QA_DB_PASSWORD" mysql ${QA_DB_HOST:+-h "$QA_DB_HOST"} -u "${QA_DB_USER:-root}" dotoree "$@"
   else
-    mysql ${QA_DB_HOST:+-h "$QA_DB_HOST"} -u "${QA_DB_USER:-root}" -p ledger_db "$@"
+    mysql ${QA_DB_HOST:+-h "$QA_DB_HOST"} -u "${QA_DB_USER:-root}" -p dotoree "$@"
   fi
 }
 

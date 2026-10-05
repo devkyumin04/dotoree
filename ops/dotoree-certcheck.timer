@@ -1,4 +1,4 @@
-# 서버 위치 /etc/systemd/system/ledger-certcheck.timer. 정본은 저장소 ops/ (ADR-051)
+# 서버 위치 /etc/systemd/system/dotoree-certcheck.timer. 정본은 저장소 ops/ (ADR-051)
 # 09:00 KST — 실패 핑은 바로 메일이 되므로 아침에 받는 시각으로. Persistent — 꺼져 있던 날은 켜지면 밀린 실행
 [Unit]
 Description=TLS certificate expiry check daily

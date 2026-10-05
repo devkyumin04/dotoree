@@ -1,17 +1,17 @@
 #!/bin/bash
-# ledger_db 일 1회 백업 → 로컬 약 7일 + S3 daily/ (수명 주기 30일 + 이전 버전 7일). ADR-050
-# 정본은 저장소 ops/. 서버 설치 위치 /usr/local/sbin/ledger-backup (root:root 700), 실행은 ledger-backup.timer
-# root 로 실행 (MySQL root = auth_socket, S3 = 인스턴스 역할 ledger-prod-ec2. 키 파일 없음)
+# dotoree 일 1회 백업 → 로컬 약 7일 + S3 daily/ (수명 주기 30일 + 이전 버전 7일). ADR-050
+# 정본은 저장소 ops/. 서버 설치 위치 /usr/local/sbin/dotoree-backup (root:root 700), 실행은 dotoree-backup.timer
+# root 로 실행 (MySQL root = auth_socket, S3 = 인스턴스 역할 dotoree-prod-app-role. 키 파일 없음)
 set -euo pipefail
 umask 077
 
-source /etc/ledger/backup.env   # S3_BACKUP_BUCKET(식별자) · HC_BACKUP_URL(비밀) — 저장소 밖, ADR-048
+source /etc/dotoree/backup.env   # S3_BACKUP_BUCKET(식별자) · HC_BACKUP_URL(비밀) — 저장소 밖, ADR-048
 
 AWS=/snap/bin/aws                # systemd PATH 에 /snap/bin 이 없다
 REGION=ap-northeast-2
-DIR=/var/backups/ledger
+DIR=/var/backups/dotoree
 KEEP_DAYS=7                      # -mtime +7 이라 실제로는 7~8개 (ADR-050)
-NAME="ledger_db-$(date +%Y%m%d-%H%M%S).sql.gz"
+NAME="dotoree-$(date +%Y%m%d-%H%M%S).sql.gz"
 OUT="$DIR/$NAME"
 
 # 끝날 때 한 번 — 성공이든 실패든 여기서 Healthchecks 에 알린다 (ADR-051)
@@ -24,7 +24,7 @@ finish() {
 }
 trap finish EXIT
 
-mysqldump --single-transaction --routines --triggers --events ledger_db | gzip > "$OUT.tmp"
+mysqldump --single-transaction --routines --triggers --events dotoree | gzip > "$OUT.tmp"
 gzip -t "$OUT.tmp"
 zcat "$OUT.tmp" | tail -1 | grep -q "^-- Dump completed" || { echo "backup FAILED: dump incomplete" >&2; exit 1; }
 mv "$OUT.tmp" "$OUT"
@@ -33,5 +33,5 @@ mv "$OUT.tmp" "$OUT"
 "$AWS" s3 cp "$OUT" "s3://$S3_BACKUP_BUCKET/daily/$NAME" --region "$REGION" --only-show-errors \
   || { echo "backup FAILED: upload (local copy kept: $OUT)" >&2; exit 1; }
 
-find "$DIR" -name 'ledger_db-*.sql.gz' -mtime +"$KEEP_DAYS" -delete
+find "$DIR" -name 'dotoree-*.sql.gz' -mtime +"$KEEP_DAYS" -delete
 echo "backup ok: $OUT ($(stat -c %s "$OUT") bytes) -> s3 daily/$NAME"
