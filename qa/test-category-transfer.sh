@@ -1,5 +1,5 @@
 #!/bin/bash
-# 카테고리 삭제 시 거래 → 같은 타입 '미분류' 이관 QA (ADR-023, 진행상황 6단계)
+# 카테고리 삭제 시 거래 → 같은 타입 '미분류' 이관 QA (ADR-023)
 # 사용법: export QA_PASSWORD='비밀번호'  후  sh qa/test-category-transfer.sh
 # 전제: 서버 기동, test@test.com + rollback@test.com (둘 다 미분류 E/I 보유)
 #

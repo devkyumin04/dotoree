@@ -19,7 +19,7 @@ public interface PersonalStatisticsMapper {
      * 다만 SUM / GROUP BY 같은 집계는 DB 가 훨씬 빠르므로 SQL 에 맡긴다.
      *   → 구분선: DB 가 잘하는 계산은 SQL, 우리 서비스의 규칙이 들어가는 계산은 서비스
      *
-     * 파라미터가 2개 이상이므로 @Param 필수 (CLAUDE.md 규칙)
+     * 파라미터가 2개 이상이므로 @Param 필수
      */
 
     /**

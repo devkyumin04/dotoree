@@ -10,7 +10,7 @@ source /etc/ledger/backup.env   # S3_BACKUP_BUCKET(식별자) · HC_BACKUP_URL(�
 AWS=/snap/bin/aws                # systemd PATH 에 /snap/bin 이 없다
 REGION=ap-northeast-2
 DIR=/var/backups/ledger
-KEEP_DAYS=7                      # -mtime +7 이라 실제로는 7~8개 (진행상황 5-5)
+KEEP_DAYS=7                      # -mtime +7 이라 실제로는 7~8개 (ADR-050)
 NAME="ledger_db-$(date +%Y%m%d-%H%M%S).sql.gz"
 OUT="$DIR/$NAME"
 

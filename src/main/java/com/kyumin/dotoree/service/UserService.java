@@ -133,7 +133,7 @@ public class UserService {
         }
 
         userMapper.updateLastLoginAt(loginUser.getUserNum());
-        userMapper.resetLoginFail(loginUser.getUserNum());   // 성공 = 실패 횟수 초기화 (기획서 "로그인")
+        userMapper.resetLoginFail(loginUser.getUserNum());   // 성공 = 실패 횟수 초기화 (ADR-057)
         String rawRefreshToken = refreshTokenService.issueNewFamily(loginUser.getUserNum());
         
 		String accessToken = jwtTokenProvider.createAccessToken(loginUser.getUserNum());

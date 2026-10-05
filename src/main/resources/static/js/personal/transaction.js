@@ -208,7 +208,7 @@ async function removeTransaction(id) {
     } catch (error) {
         if (isStale(error)) return handleStale(error);
         // 삭제는 모달을 거치지 않으므로 resultMessage(모달 안)에 쓰면 보이지 않는다.
-        // 메시지 표시용 UI 를 만들기 전까지는 alert 로 (진행상황.md "뷰 대공사" 참고)
+        // 메시지 표시용 UI 를 만들기 전까지는 alert 로 (뷰 대공사 때 바꾼다)
         alert(error.message);
     }
 }
