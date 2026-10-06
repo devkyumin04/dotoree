@@ -28,8 +28,8 @@
 
 - **Backend** — Java 17, Spring Boot 4, Spring Security, JWT(jjwt), MyBatis, MySQL 8.4, Flyway
 - **Frontend** — Vanilla JavaScript(ES6+), HTML5/CSS3, Fetch API
-- **Infra** — AWS EC2(ARM t4g) 한 대에 앱 + MySQL, Nginx + Let's Encrypt, S3(백업·메일함), SES, SNS, GitHub Actions(OIDC), Cloudflare DNS
-- **운영** — systemd, 매일 DB 백업 → S3(복원 리허설까지), UptimeRobot · Healthchecks.io 감시
+- **Infra** — AWS EC2(ARM t4g) 한 대에 앱 + MySQL, Nginx + Let's Encrypt, S3(백업·메일함), SES, SNS, Route 53 헬스 체크, CloudWatch, GitHub Actions(OIDC), Cloudflare DNS
+- **운영** — systemd, 매일 DB 백업 → S3(복원 리허설까지), 감시는 Route 53 헬스 체크 + CloudWatch 경보(백업·인증서 지표 포함)
 - **예정** — Naver Clova OCR, 로컬 LLM(Ollama), 한국어 문장 임베딩, 카카오맵, PWA
 
 ## 구조

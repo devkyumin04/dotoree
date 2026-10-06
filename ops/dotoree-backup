@@ -5,7 +5,7 @@
 set -euo pipefail
 umask 077
 
-source /etc/dotoree/backup.env   # S3_BACKUP_BUCKET(식별자) · HC_BACKUP_URL(비밀) — 저장소 밖, ADR-048
+source /etc/dotoree/backup.env   # S3_BACKUP_BUCKET(식별자) — 저장소 밖, ADR-048
 
 AWS=/snap/bin/aws                # systemd PATH 에 /snap/bin 이 없다
 REGION=ap-northeast-2
@@ -14,13 +14,14 @@ KEEP_DAYS=7                      # -mtime +7 이라 실제로는 7~8개 (ADR-050
 NAME="dotoree-$(date +%Y%m%d-%H%M%S).sql.gz"
 OUT="$DIR/$NAME"
 
-# 끝날 때 한 번 — 성공이든 실패든 여기서 Healthchecks 에 알린다 (ADR-051)
-#   /0 = 성공, /<종료코드> = 실패 → 실패는 25시간 기다리지 않고 바로 메일. 핑이 아예 안 오면(서버·타이머 죽음) 25시간 뒤 메일
-#   핑 실패는 백업 결과를 바꾸지 않는다 — 로그만 남긴다 (curl 오류 문구엔 URL 이 안 찍힌다)
+# 끝날 때 한 번 — 성공이든 실패든 CloudWatch 지표 dotoree/BackupOK 에 1(성공)·0(실패)을 남긴다 (ADR-051)
+#   경보 두 개가 본다(us-east-1): 0 이 들어오면 바로 메일 · 24시간 동안 1 이 없으면(서버·타이머가 죽은 경우 포함) 메일
+#   지표 쓰기 실패는 백업 결과를 바꾸지 않는다 — 로그만 남긴다
 finish() {
   local rc=$?
   rm -f "$OUT.tmp"
-  curl -fsS -m 10 --retry 5 -o /dev/null "$HC_BACKUP_URL/$rc" || echo "heartbeat ping failed" >&2
+  "$AWS" cloudwatch put-metric-data --region us-east-1 --namespace dotoree --metric-name BackupOK \
+    --value "$([ "$rc" -eq 0 ] && echo 1 || echo 0)" || echo "metric put failed" >&2
 }
 trap finish EXIT
 

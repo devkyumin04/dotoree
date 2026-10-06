@@ -1,16 +1,16 @@
 #!/bin/bash
-# 인증서 만료 감시 — Nginx 가 지금 내보내는 인증서가 21일 넘게 남았으면 성공 핑, 아니면 실패 핑. ADR-051
+# 인증서 만료 감시 — Nginx 가 지금 내보내는 인증서의 남은 날짜를 CloudWatch 지표 dotoree/CertDaysLeft 로 남긴다. ADR-051
 # 정본은 저장소 ops/. 서버 설치 위치 /usr/local/sbin/dotoree-certcheck (root:root 700), 실행은 dotoree-certcheck.timer
 # 파일(/etc/letsencrypt)이 아니라 443 에 실제로 붙어 보는 이유 — 갱신은 됐는데 Nginx reload 가 안 된 경우도 잡으려고
 # certbot 은 만료 30일 전부터 갱신한다 → 21일이 남았는데 그대로면 9일 동안 갱신이 실패한 것
+# 경보 두 개가 본다(us-east-1): 21 이하(못 읽으면 -1)면 바로 메일 · 24시간 동안 값이 없으면 메일
 set -euo pipefail
 
-source /etc/dotoree/backup.env   # HC_CERT_URL (비밀, ADR-048)
-
+AWS=/snap/bin/aws                # systemd PATH 에 /snap/bin 이 없다
 DOMAIN=dotoree.app
 DAYS=21
 
-rc=0
+rc=0; LEFT=-1
 END=$(openssl s_client -connect 127.0.0.1:443 -servername "$DOMAIN" </dev/null 2>/dev/null \
   | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2) || END=""
 if [ -z "$END" ]; then
@@ -22,5 +22,6 @@ else
 fi
 
 echo "$MSG"
-curl -fsS -m 10 --retry 5 -o /dev/null --data-raw "$MSG" "$HC_CERT_URL/$rc" || echo "heartbeat ping failed" >&2
+"$AWS" cloudwatch put-metric-data --region us-east-1 --namespace dotoree --metric-name CertDaysLeft --value "$LEFT" \
+  || echo "metric put failed" >&2
 exit "$rc"

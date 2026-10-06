@@ -514,6 +514,8 @@
 
 ### ADR-051. 감시 — 바깥은 UptimeRobot, 작업은 Healthchecks.io, 인증서는 서버가 스스로 검사
 
+> **폐기 (2026-10-06)** — 감시 도구는 ADR-059 로 대체한다(UptimeRobot · Healthchecks.io → AWS Route 53 헬스 체크 · CloudWatch 경보). 감시할 대상(바깥 health · 백업 · 인증서 21일)과 "키워드로 판정" · "인증서는 443 에서" · "`trap` 한 곳에서" 는 그대로 유효
+
 - **문제** — ADR-002 는 이중화 대신 "자동 재시작 · 백업 · 외부 감시"로 가기로 했다. 셋째가 남았다 — 서버가 죽거나, 백업이 멈추거나(5-5 는 실패해도 journal 뿐), 인증서 갱신이 실패하면(`.app` 은 HSTS 라 사이트가 통째로 닫힌다) **누가 들여다보기 전엔 모른다**
 - **전제** — 실무 감시는 세 층이다: 바깥에서 찌르기(synthetic) / 안에서 재기(메트릭 — Prometheus·Grafana·Datadog) / 로그·에러(ELK·Sentry). 알림은 PagerDuty·Opsgenie 같은 온콜 도구를 거친다. 서버 한 대 · 사용자 0명이라 지금 필요한 건 **바깥층 + 작업(크론) 감시**뿐이다
 - **선택**
@@ -688,6 +690,27 @@
   7. 순서 — 저장소·서버·DB 를 한 번에(서비스가 10분쯤 멈춘다) → AWS 자원은 하나씩 새로 만들어 갈아 끼우고 옛것 삭제 → 맥 폴더·키 파일
 - **근거** — 업계 단일 표준은 없고 회사마다 규칙 문서를 둔다. 공통점은 규칙을 문서로 정해 모든 자원에 똑같이 적용하고, 환경을 넣고, 이름엔 안 바뀌는 정보만 두고 나머지는 태그로 다는 것 (Microsoft Cloud Adoption Framework "Define your naming convention" — 거긴 종류를 맨 앞에 둔다: `vm-web-prod-001`)
 - **감수** — AWS 자원을 새로 만드는 동안 신뢰 정책·Secrets·버킷 정책을 다시 맞춰야 한다. 옛 백업은 옛 버킷에서 만료되게 두거나 옮긴다. 옛 이름은 git 이력에만 남는다
+
+### ADR-059. 감시를 AWS 로 모은다 — Route 53 헬스 체크 + CloudWatch 경보, 통로는 us-east-1 SNS 하나 (2026-10-06)
+
+- **문제** — ADR-051 의 감시는 업체 두 곳(UptimeRobot · Healthchecks.io)·계정 두 개·2FA 두 개였다. ADR-058 로 서버를 새로 만들며 둘 다 손봐야 했는데, 웹 화면에서만 바꿀 수 있어 기록(명령)이 남지 않았고 같은 URL 모니터를 두 개 못 만드는 등 옮기기도 번거로웠다
+- **선택** — ADR-051 의 대안에 있던 CloudWatch 로 모은다. 감시할 대상은 그대로
+  - **바깥** — Route 53 헬스 체크 `dotoree-prod-health`: `HTTPS_STR_MATCH` · `/actuator/health` 본문에 `"status":"UP"` · 30초 · 3회 실패. 전 세계 검사기 여러 곳이 찌른다. 경보 `dotoree-prod-health` — 상태 값 최솟값이 3분 연속 1 미만이면 ALARM
+  - **작업** — 백업·인증서 스크립트가 끝날 때 핑 대신 CloudWatch 지표를 남긴다: `dotoree/BackupOK`(1 성공 · 0 실패) · `dotoree/CertDaysLeft`(남은 날, 못 읽으면 -1). 작업마다 경보 둘 — **값이 나쁘면 바로**(5분 칸: `backup-failed` · `cert-low` ≤ 21) · **값이 끊기면 하루 뒤**(1시간 칸 24개가 전부 비면: `backup-missing` · `cert-missing`)
+  - **통로** — 경보 5개와 SNS 주제 `dotoree-prod-alerts`(이메일 구독)를 **us-east-1 한 곳**에. ALARM · OK 둘 다 메일
+  - **권한** — 인스턴스 역할에 `cloudwatch:PutMetricData` 하나, 조건 `cloudwatch:namespace=dotoree` + `aws:RequestedRegion=us-east-1`(이 API 는 리소스로 못 좁혀서 조건으로)
+- **근거**
+  - 업체 셋(AWS · UptimeRobot · Healthchecks) → 하나. 비밀이 줄어든다 — 핑 URL(약한 비밀)이 없어지고, 서버는 키 파일 없이 인스턴스 역할로 쓴다
+  - 전부 CLI 로 만들어 작업 이력에 명령째 남는다. 취업 뒤 정리도 AWS 한 곳
+  - Route 53 헬스 체크 지표는 us-east-1 에만 생긴다 → 경보·통로를 거기 모으면 리전이 하나. 서울 리전 장애 때도 경보는 버지니아에서 울린다
+  - 헬스 체크는 도메인이 아니라 **탄력적 IP + Host/SNI `dotoree.app`** 로 — "AWS 엔드포인트" 요금(기본료 무료, HTTPS · 문자열 검사 옵션만 월 약 $2)이고, SNI 가 없으면 Nginx 문지기(모르는 이름은 TLS 거부)에 막힌다
+  - "바로" 경보를 1시간 칸으로 만들었더니 실패 값이 들어와도 그 시간이 끝나야 울렸다 → 5분 칸. "끊김" 경보는 24시간을 봐야 해서 1시간 칸 × 24(경보 평가 범위가 하루를 넘지 않게)
+- **대안** — ADR-051 그대로(업체 두 곳) / CloudWatch Synthetics 캐너리(브라우저까지 흉내 — 5분마다면 월 $10 안팎, 이 규모엔 과함) / 도메인·DNS 까지 Route 53 으로(등록 후 60일이 지나야 옮길 수 있고 연 $6 더 비싸다 — Cloudflare 유지)
+- **감수**
+  - **감시가 감시 대상과 같은 회사 안에 있다** — AWS 계정 정지·결제 문제·AWS 전체 장애 때는 서비스와 알림이 같이 멈춘다(ADR-051 의 "감시는 대상 밖에" 를 일부 내려놓음). 서버·리전 장애는 잡는다
+  - 헬스 체크는 IP 를 박아 둔다 — 탄력적 IP 를 바꾸면 헬스 체크도 새로
+  - "끊김" 경보는 1시간 단위라 최대 약 1시간 늦게 안다
+- **검증 (2026-10-06)** — 헬스 체크 검사기 16곳 모두 `200 · string found` → 경보 OK / 서버 권한 시험 — `dotoree`·us-east-1 허용, 다른 이름공간·서울 리전 `AccessDenied` / 두 스크립트 1회 실행 → 지표 BackupOK 1 · CertDaysLeft 89 도착 / **실패 흉내** — 가짜 BackupOK=0 · CertDaysLeft=5 + 헬스 체크 `--inverted`(서비스는 그대로, 판정만 뒤집기) → ALARM 메일 3통(값 경보 약 2분, health 약 3분) → 되돌리자 OK 메일
 
 ## 공동 가계부 (Sprint 4 예정)
 
