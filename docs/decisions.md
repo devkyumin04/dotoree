@@ -437,6 +437,13 @@
   - systemd(root)가 `EnvironmentFile` 을 읽어 환경변수로 넘긴 **뒤에** `User=dotoree` 로 내려간다 → 앱 계정은 그 파일을 읽을 필요가 없다. 배포 계정(`deploy`)도 못 읽는다(3-3 실측)
   - **앱은 자기 실행 파일을 고칠 수 없어야 한다** — 뚫린 앱이 jar 를 바꿔치기하는 경로 차단
   - jar 이름은 버전 없이 고정 — 버전이 파일명에 박히면 올릴 때마다 유닛 파일을 고친다 (ADR-041)
+- **유닛 파일** `dotoree.service` (2026-10-06 보완 — 새 서버로 옮기며 두 줄 추가)
+  - `After=network-online.target mysql.service` + `Wants=network-online.target` — `After` 는 순서만 정하고 기다리게 하지 않는다. `Wants` 가 있어야 네트워크 준비를 실제로 기다린다. **`Requires=mysql` 은 쓰지 않는다** — "MySQL 이 멈추면 나도 멈춰라" 까지라 MySQL 재시작마다 앱이 같이 내려간다. 접속 실패는 `Restart` 가 받는다
+  - `Restart=always` + `RestartSec=5` — 간격이 없으면 기동 실패 때 초당 수십 번 재시도하며 로그를 태운다. 앱이 죽으면 `Restart`, 서버가 재부팅되면 `enable` — 둘은 따로다
+  - `ExecStart` 는 절대경로(`/usr/bin/java -jar /opt/dotoree/dotoree.jar`) — systemd 는 셸이 아니라 `PATH` 를 보지 않는다
+  - `SuccessExitStatus=143` — 자바는 SIGTERM 을 받으면 143 으로 끝난다. 이 줄이 없으면 정상적인 `stop` 이 `failed` 로 보인다
+  - 보안 4줄 — `NoNewPrivileges` · `PrivateTmp` · `ProtectSystem=full` · `ProtectHome`. `EnvironmentFile` 은 systemd 가 샌드박스를 걸기 전에 읽으므로 영향이 없다
+  - **`Type=simple` 의 `active` 는 "프로세스를 띄웠다" 까지다** — 기동에 실패해도 재시작 사이엔 `active (running)` 으로 보인다(재시작 직후 메모리 1.9M 실측, 앱은 약 300Mi). 그래서 CD 는 `active` 가 아니라 서버 안 `localhost:8080/actuator/health` 의 200 을 기다린다
 - **감수** — 비밀값이 평문 파일이다. 서버가 늘면 Parameter Store·Secrets Manager 로 (한 대짜리엔 과함)
 
 ### ADR-047. CD 접속 경로 — 배포할 때만 22번을 러너에게 열고, 권한은 OIDC
@@ -483,6 +490,7 @@
   - 윈도우에선 맑은 고딕, 로고의 800 굵기가 700 처럼 보인다
   - 헤더 3종이 Spring 기본값에 기대고 있다 — `.headers(h -> h.defaultsDisabled())` 같은 변경은 이 결정을 깬다
   - 게이트(curl)는 CSP 위반을 못 잡는다. 화면을 바꾸면 브라우저로 한 바퀴 (트러블슈팅 16·17 과 같은 날, 공격 흉내로 차단 실측)
+  - 확인은 콘솔 출력이 아니라 `securitypolicyviolation` 이벤트와 기능 동작으로 — 자동화 도구로 읽은 콘솔엔 위반 문구가 안 잡혀 "콘솔 0건" 이 증거가 되지 못했다
 
 ### ADR-050. DB 백업 — 서버는 넣기만, 보관은 S3 30일, 복원까지 해야 끝
 
