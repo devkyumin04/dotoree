@@ -1,5 +1,5 @@
 # 액션을 커밋 SHA 로 고정하면 자동 업데이트가 끊긴다 — Dependabot 이 새 버전의 SHA 로 올리는 PR 을 만들어 준다.
-# PR 에서는 build 잡만 돌고 deploy 는 안 돈다(main push 조건). 머지하면 그때 배포된다
+# PR 에서는 build · qa 잡이 돌고(main 보호 규칙의 필수 검사) deploy 는 안 돈다(main push 조건). 머지하면 그때 배포된다
 version: 2
 updates:
   - package-ecosystem: "github-actions"
