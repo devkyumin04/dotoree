@@ -21,13 +21,14 @@ public interface UserMapper {
 
     void updateLastLoginAt(@Param("userNum") Integer userNum);
 
-    // ── 로그인 잠금 (ADR-057) — 세는 것과 잠그는 것을 나눈다. 잠글지는 DB 의 현재 횟수로 판정(WHERE) → 동시 실패가 겹쳐도 틈이 없다
-    void increaseLoginFailCount(@Param("userNum") Integer userNum);
-    // 1 = 이번에 잠갔다(호출 쪽이 423) / 0 = 아직 (401)
-    int lockIfFailedTooMany(@Param("userNum") Integer userNum, @Param("maxFailCount") int maxFailCount,
-                            @Param("lockedUntil") LocalDateTime lockedUntil);
-    // 성공 · 잠금 만료 뒤 첫 시도 — 횟수 0, 잠금 해제
-    void resetLoginFail(@Param("userNum") Integer userNum);
+	// 실패 횟수 0 · 잠금 해제
+	void resetLoginFail(@Param("userNum") Integer userNum);
+
+	// 실패 횟수 +1
+	void increaseLoginFailCount(@Param("userNum") Integer userNum);
+
+	int lockIfFailLimitReached(@Param("userNum") Integer userNum, @Param("lockedUntil") LocalDateTime lockedUntil,
+			@Param("maxFailCount") int maxFailCount);
 
     // ── 마이페이지 ─────────────────────────────────────
     // 활동 계정만. 0행 = 없거나 탈퇴한 계정

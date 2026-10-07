@@ -39,12 +39,11 @@ public class UserService {
     private final PersonalCategoryMapper personalCategoryMapper;
 	private final RefreshTokenService refreshTokenService;
 
-    // ── 로그인 잠금 (ADR-057) — 계정 기준 5회 실패 → 30분. 성공하면 0 부터. 값은 여기 한 곳(환경마다 다르지 않고 비밀도 아니다)
-    private static final int MAX_FAIL_COUNT = 5;
-    private static final Duration LOCK_DURATION = Duration.ofMinutes(30);
     // 없음·불일치·파기됨을 한 문구로 — 어느 쪽인지 알려 주지 않는다 (계정 존재 비노출은 가입 409 때문에 이미 반쪽이지만, 굳이 더 열지 않는다)
     private static final String LOGIN_FAIL_MESSAGE = "이메일 또는 비밀번호가 일치하지 않습니다.";
 
+	private static final int MAX_FAIL_COUNT = 5;
+	private static final int LOCK_MINUTES = 30;
     @Transactional
     public SignupResponseDto signup(SignupRequestDto requestDto) {
 
@@ -89,39 +88,39 @@ public class UserService {
         personalCategoryMapper.insertCategory(category);
     }
     
-	// noRollbackFor — 실패 횟수를 올리고 나서 401·423 을 던진다. 기본값이면 그 UPDATE 가 롤백돼 잠금이 영영 안 걸린다.
-	// 여기서 두 예외는 고장이 아니라 "거절" — 거절 기록은 커밋, 고장(DB 오류 등)만 롤백 (RefreshTokenService.refresh 와 같은 생각, ADR-055 선택 13)
+	// 실패 횟수를 올린 뒤 401·423 을 던진다. 기본 규칙(예외 = 롤백)이면 그 +1 이 되돌려져 잠금이 영영 안 걸린다.
+	// 두 예외는 고장이 아니라 "거절" — 거절 기록은 남기고, 진짜 고장(DB 오류 등)만 롤백 (RefreshTokenService.refresh 와 같은 생각)
 	@Transactional(noRollbackFor = { InvalidCredentialsException.class, AccountLockedException.class })
 	public LoginResult login(LoginRequestDto requestDto) {
 
         User loginUser = userMapper.findByEmail(requestDto.getEmail());
-      	
+
         if(loginUser == null) {
-            // 없는 이메일은 세지 않는다 — 셀 계정이 없다. 잠금은 계정 기준이라 IP 로 세는 장치는 두지 않았다 (ADR-057)
         	throw new InvalidCredentialsException(LOGIN_FAIL_MESSAGE);
         }
 
-        LocalDateTime now = LocalDateTime.now();
-
-        // 잠금 검사는 비밀번호보다 먼저 — 잠긴 동안은 맞는 비밀번호도 거절(시도 자체를 막는 게 목적). 세지도 않는다(잠금을 늘리면 남이 잠그는 피해가 커진다)
-        if (loginUser.getLockedUntil() != null) {
-            if (loginUser.getLockedUntil().isAfter(now)) {
-                throw new AccountLockedException(lockedMessage(loginUser.getLockedUntil(), now));
-            }
-            // 잠금이 풀렸다 — 0 부터 다시 센다. 안 그러면 30분 뒤 한 번만 틀려도 바로 다시 잠긴다
-            userMapper.resetLoginFail(loginUser.getUserNum());
-        }
+		LocalDateTime now = LocalDateTime.now();
+		if (loginUser.getLockedUntil() != null) {
+			if (loginUser.getLockedUntil().isAfter(now)) {
+				throw new AccountLockedException(buildLockedMessage(loginUser.getLockedUntil(), now));
+			} else {
+				userMapper.resetLoginFail(loginUser.getUserNum());
+			}
+		}
 
         boolean isPasswordMatch = passwordEncoder.matches(requestDto.getPassword(), loginUser.getUserPw());
 
         if (!isPasswordMatch) {
-            userMapper.increaseLoginFailCount(loginUser.getUserNum());
-            // 잠글지는 DB 의 현재 횟수로(매퍼 WHERE). 1행이면 이번 실패로 잠긴 것 → 423, 0행이면 아직 → 401
-            LocalDateTime lockedUntil = now.plus(LOCK_DURATION);
-            if (userMapper.lockIfFailedTooMany(loginUser.getUserNum(), MAX_FAIL_COUNT, lockedUntil) == 1) {
-                throw new AccountLockedException(lockedMessage(lockedUntil, now));
-            }
-            throw new InvalidCredentialsException(LOGIN_FAIL_MESSAGE);
+			userMapper.increaseLoginFailCount(loginUser.getUserNum());
+
+			LocalDateTime lockedUntil = now.plusMinutes(LOCK_MINUTES);
+			int lockedRows = userMapper.lockIfFailLimitReached(loginUser.getUserNum(), lockedUntil,
+					MAX_FAIL_COUNT);
+			if (lockedRows == 1) {
+				throw new AccountLockedException(buildLockedMessage(lockedUntil, now));
+			}
+
+			throw new InvalidCredentialsException(LOGIN_FAIL_MESSAGE);
         }
 
         // 유예 중(파기 전) 탈퇴 계정의 로그인 = 탈퇴 취소 (ADR-052). 비밀번호 확인 뒤에만 복구한다.
@@ -132,8 +131,9 @@ public class UserService {
             }
         }
 
+		userMapper.resetLoginFail(loginUser.getUserNum());
+
         userMapper.updateLastLoginAt(loginUser.getUserNum());
-        userMapper.resetLoginFail(loginUser.getUserNum());   // 성공 = 실패 횟수 초기화 (ADR-057)
         String rawRefreshToken = refreshTokenService.issueNewFamily(loginUser.getUserNum());
         
 		String accessToken = jwtTokenProvider.createAccessToken(loginUser.getUserNum());
@@ -145,12 +145,12 @@ public class UserService {
         );
     }
 
-    // "N분 뒤" 는 올림 — 29분 1초 남았으면 30분. 1분 미만도 1분 (0분이라 하면 바로 되는 줄 안다)
-    private String lockedMessage(LocalDateTime lockedUntil, LocalDateTime now) {
-        long minutes = Math.max(1, Duration.between(now, lockedUntil).plusSeconds(59).toMinutes());
-        return "로그인 " + MAX_FAIL_COUNT + "회 실패로 계정이 잠겼습니다. " + minutes + "분 뒤 다시 시도해 주세요.";
-    }
-    
+	private String buildLockedMessage(LocalDateTime lockedUntil, LocalDateTime now) {
+		long remainingSeconds = Duration.between(now, lockedUntil).toSeconds();
+		long remainingMinutes = (long) Math.ceil(remainingSeconds / 60.0);
+		return "로그인 " + MAX_FAIL_COUNT + "회 실패로 계정이 잠겼습니다. " + remainingMinutes + "분 뒤 다시 시도해 주세요.";
+	}
+
     // ── 마이페이지 ─────────────────────────────────────
     // 마이페이지 들어가기 전 비밀번호 확인 — 화면의 관문. 통과하면 204
     // 막는 것: 로그인된 채 둔 화면을 남이 여는 것. 토큰을 가진 사람이 API 를 직접 부르는 건 못 막는다 —

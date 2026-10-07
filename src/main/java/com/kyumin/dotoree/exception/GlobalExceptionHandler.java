@@ -5,11 +5,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
-import org.springframework.web.method.annotation.HandlerMethodValidationException;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,11 +46,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
     }
 
-    // 423 — 로그인 잠금 (ADR-057). 상태가 하나뿐이라 부모 없음
-    @ExceptionHandler(AccountLockedException.class)
-    public ResponseEntity<String> handleAccountLocked(AccountLockedException e) {
-        return ResponseEntity.status(HttpStatus.LOCKED).body(e.getMessage());
-    }
+	@ExceptionHandler(AccountLockedException.class)
+	public ResponseEntity<String> handleAccountLocked(AccountLockedException e) {
+		return ResponseEntity.status(HttpStatus.LOCKED).body(e.getMessage());
+	}
 
     // ── 스프링 예외 — 문구가 각각 달라 하나씩 ─────────────────────────────
 
