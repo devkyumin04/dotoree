@@ -41,6 +41,8 @@ public class UserService {
 
     // 없음·불일치·파기됨을 한 문구로 — 어느 쪽인지 알려 주지 않는다 (계정 존재 비노출은 가입 409 때문에 이미 반쪽이지만, 굳이 더 열지 않는다)
     private static final String LOGIN_FAIL_MESSAGE = "이메일 또는 비밀번호가 일치하지 않습니다.";
+	// 로그인한 사용자의 계정이 없을 때(탈퇴·파기 뒤 남은 토큰) — 401 문구 하나로
+	private static final String USER_NOT_FOUND_MESSAGE = "사용자를 찾을 수 없습니다.";
 
 	private static final int MAX_FAIL_COUNT = 5;
 	private static final int LOCK_MINUTES = 30;
@@ -154,40 +156,45 @@ public class UserService {
 	}
 
     // ── 마이페이지 ─────────────────────────────────────
-    // 마이페이지 들어가기 전 비밀번호 확인 — 화면의 관문. 통과하면 204
-    // 막는 것: 로그인된 채 둔 화면을 남이 여는 것. 토큰을 가진 사람이 API 를 직접 부르는 건 못 막는다 —
-    //         그래서 비밀번호 변경·탈퇴는 이 관문과 별개로 각자 비밀번호를 다시 받는다 (닉네임은 피해가 작아 받지 않는다)
-    public void verifyPassword(Integer userNum, PasswordConfirmRequestDto requestDto) {
-        checkPassword(userNum, requestDto.getPassword(), "비밀번호가 일치하지 않습니다.");
-    }
+	// 마이페이지 들어가기 전 비밀번호 확인 — 화면의 관문. 통과하면 204
+	// 막는 것: 로그인된 채 둔 화면을 남이 여는 것. 토큰을 가진 사람이 API 를 직접 부르는 건 못 막는다 —
+	//         그래서 비밀번호 변경·탈퇴는 이 관문과 별개로 각자 비밀번호를 다시 받는다 (닉네임은 피해가 작아 받지 않는다)
+	public void verifyPassword(Integer userNum, PasswordConfirmRequestDto requestDto) {
+		checkPassword(userNum, requestDto.getPassword(), "비밀번호가 일치하지 않습니다");
+	}
 
     public UserInfoResponseDto updateNickname(Integer userNum, NicknameRequestDto requestDto) {
 
         if (userMapper.updateNickname(userNum, requestDto.getNickname()) == 0) {
-            throw new InvalidCredentialsException("사용자를 찾을 수 없습니다.");
+            throw new InvalidCredentialsException(USER_NOT_FOUND_MESSAGE);
         }
         return getMyInfo(userNum);
     }
 
-    // 현재 비밀번호를 확인한 뒤에만 바꾼다. 토큰이 있어도 비번을 모르면 못 바꾼다 (탈퇴와 같은 이유)
-    // 바꾼 뒤 모든 기기의 Refresh 폐기 — 비번을 바꾸는 흔한 이유가 "누가 내 계정을 쓰는 것 같다"라서, 옛 카드를 든 사람을 같이 내보낸다 (ADR-055 선택 16)
-    // @Transactional — 비번만 바뀌고 폐기가 실패하면 도둑의 카드가 산다. 둘 다 되거나 둘 다 안 되게(실패하면 사용자가 다시 시도)
-    @Transactional
-    public void changePassword(Integer userNum, PasswordChangeRequestDto requestDto) {
+	// 비밀번호 변경 — 거절(현재 비번 확인 · 같은 비번) → 준비(암호화) → 바꾸기 → 뒷정리(전 세션 폐기)
+	// 암호화는 거절이 다 끝난 뒤 — BCrypt 는 일부러 느린 연산이라 돌려보낼 요청에 쓰지 않는다
+	// 바꾼 뒤 모든 기기의 Refresh 폐기 — 비번을 바꾸는 흔한 이유가 "누가 내 계정을 쓰는 것 같다"라서, 옛 카드를 든 사람을 같이 내보낸다 (ADR-055 선택 16)
+	// @Transactional — 비번만 바뀌고 폐기가 실패하면 도둑의 카드가 산다. 둘 다 되거나 둘 다 안 되게(실패하면 사용자가 다시 시도)
+	@Transactional
+	public void changePassword(Integer userNum, PasswordChangeRequestDto requestDto) {
+		checkPassword(userNum, requestDto.getCurrentPassword(), "현재 비밀번호가 일치하지 않습니다.");
+		
+		// 현재 비번은 바로 위에서 맞다고 확인됐으니 원문끼리 비교하면 된다 (해시를 다시 돌릴 필요 없음).
+		// 왼쪽에 현재 비번 — 위 확인을 통과했으니 null 이 아니다 (@Valid @NotBlank 도 막는다)
+		if (requestDto.getCurrentPassword().equals(requestDto.getNewPassword())) {
+			throw new SamePasswordException("현재 비밀번호와 다른 비밀번호를 입력해주세요.");
+		}
+		
+		String encodedPassword = passwordEncoder.encode(requestDto.getNewPassword());
+		
+		// 0행 = 확인과 UPDATE 사이에 탈퇴·파기된 계정 → 없는 사용자로 취급(401)
+		int updatedRows = userMapper.updatePassword(userNum, encodedPassword);
+		if (updatedRows == 0) {
+			throw new InvalidCredentialsException(USER_NOT_FOUND_MESSAGE);
+		}
 
-        checkPassword(userNum, requestDto.getCurrentPassword(), "현재 비밀번호가 일치하지 않습니다.");
-
-        // 현재 비번은 바로 위에서 맞다고 확인됐으니, 새 비번과 문자열로 비교하면 된다 (해시를 다시 돌릴 필요 없음)
-        if (requestDto.getNewPassword().equals(requestDto.getCurrentPassword())) {
-            throw new SamePasswordException("현재 비밀번호와 다른 비밀번호를 입력해주세요.");
-        }
-
-        String encoded = passwordEncoder.encode(requestDto.getNewPassword());
-        if (userMapper.updatePassword(userNum, encoded) == 0) {
-            throw new InvalidCredentialsException("사용자를 찾을 수 없습니다.");
-        }
-        refreshTokenService.revokeAllOfUser(userNum);
-    }
+		refreshTokenService.revokeAllOfUser(userNum);
+	}
 
 	// 탈퇴 = 논리적 삭제 + 유예 시작. 30일 뒤 purgeUser 가 물리적으로 지운다 (ADR-052)
 	// 감수 — 이미 발급된 액세스 토큰은 만료(15분)까지 유효하다. 필터가 매 요청 DB 를 보지 않기 때문(stateless JWT).
@@ -202,7 +209,7 @@ public class UserService {
 		// 'A' 인 계정만 바뀐다. 0행 = 이미 탈퇴한 계정의 남은 토큰 → 없는 사용자로 취급
 		int withdrawnRows = userMapper.withdraw(userNum);
 		if (withdrawnRows == 0) {
-			throw new InvalidCredentialsException("사용자를 찾을 수 없습니다.");
+			throw new InvalidCredentialsException(USER_NOT_FOUND_MESSAGE);
 		}
 		refreshTokenService.revokeAllOfUser(userNum);
 	}
@@ -225,27 +232,30 @@ public class UserService {
 		return true;
 	}
 
-    // 로그인한 사용자의 비밀번호 재확인 — 관문·비번 변경·탈퇴가 같이 쓴다.
-    // 틀리면 400(PasswordMismatchException). 401 이면 apiClient.js 가 로그아웃시킨다
-    private void checkPassword(Integer userNum, String rawPassword, String mismatchMessage) {
+	// 로그인한 사용자의 비밀번호 재확인 — 관문·비번 변경·탈퇴가 같이 쓴다
+	// void + 예외 — boolean 을 돌려주면 부르는 쪽마다 if 가 필요하고, 하나라도 빠뜨리면 틀린 비번이 조용히 통과한다
+	// 비번 틀림은 400(PasswordMismatchException) — 401 이면 apiClient.js 가 만료로 보고 재발급·재시도 뒤 로그인 화면으로 보낸다(오타 한 번에 로그아웃)
+	// 계정 없음(탈퇴·파기 뒤 남은 토큰)은 401 — 그땐 로그인 화면으로 보내는 게 맞다
+	// 문구는 부르는 쪽이 정한다 — 비번 변경은 칸이 둘(현재·새)이라 "현재 비밀번호가…" 로 어느 칸인지 알린다
+	private void checkPassword(Integer userNum, String rawPassword, String mismatchMessage) {
 
-        User user = userMapper.findByUserNum(userNum);
+		User user = userMapper.findByUserNum(userNum);
 
-        if (user == null) {
-            throw new InvalidCredentialsException("사용자를 찾을 수 없습니다.");
-        }
+		if (user == null) {
+			throw new InvalidCredentialsException(USER_NOT_FOUND_MESSAGE);
+		}
 
-        if (!passwordEncoder.matches(rawPassword, user.getUserPw())) {
-            throw new PasswordMismatchException(mismatchMessage);
-        }
-    }
+		if (!passwordEncoder.matches(rawPassword, user.getUserPw())) {
+			throw new PasswordMismatchException(mismatchMessage);
+		}
+	}
 
     public UserInfoResponseDto getMyInfo(Integer userNum) {
 
         User user = userMapper.findByUserNum(userNum);
 
         if (user == null) {
-            throw new InvalidCredentialsException("사용자를 찾을 수 없습니다.");
+            throw new InvalidCredentialsException(USER_NOT_FOUND_MESSAGE);
         }
 
         return new UserInfoResponseDto(

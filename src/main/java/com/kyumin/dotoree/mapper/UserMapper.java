@@ -33,7 +33,7 @@ public interface UserMapper {
     // ── 마이페이지 ─────────────────────────────────────
     // 활동 계정만. 0행 = 없거나 탈퇴한 계정
     int updateNickname(@Param("userNum") Integer userNum, @Param("nickname") String nickname);
-    int updatePassword(@Param("userNum") Integer userNum, @Param("encodedPassword") String encodedPassword);
+	int updatePassword(@Param("userNum") Integer userNum, @Param("encodedPassword") String encodedPassword);
 
     // ── 탈퇴 · 복구 · 파기 (ADR-052) ──────────────────────
 	// 사용자 탈퇴, 0행이면 업데이트된 행 없다는 의미(이미 탈퇴한 계정이면 0행)
