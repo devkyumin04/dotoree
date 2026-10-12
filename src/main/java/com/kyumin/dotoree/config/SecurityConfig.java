@@ -55,8 +55,10 @@ public class SecurityConfig {
                     return;
                 }
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.setContentType("text/plain;charset=UTF-8");
-                response.getWriter().write("로그인이 필요합니다.");
+                // 필터는 컨트롤러 밖이라 GlobalExceptionHandler 가 못 받는다 → 같은 ProblemDetail 모양을 직접 쓴다 (ADR-061)
+                response.setContentType("application/problem+json;charset=UTF-8");
+                response.getWriter().write(
+                    "{\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"로그인이 필요합니다.\"}");
             }))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/users/signup", "/api/users/login").permitAll()

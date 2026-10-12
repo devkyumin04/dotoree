@@ -122,6 +122,7 @@
 - **문제** — API 호출 에러와 페이지 접근 에러가 같은 핸들러를 타면 JS `fetch`가 HTML을 받거나 브라우저가 JSON을 그대로 보여줌
 - **선택** — `@RestControllerAdvice(annotations = RestController.class)`로 범위 한정. `CustomErrorController`가 `/api`로 시작하면 `ResponseEntity`, 아니면 HTML forward
 - **추가** — 최종 `Exception` 핸들러는 `e.getMessage()` 노출 없이 고정 문구 (DB 스키마 노출 방지). JSON 파싱 실패·타입 불일치는 400
+- **바뀜 (2026-10-12)** — API 본문 형식은 텍스트 → ProblemDetail (ADR-061). API/페이지 분리는 그대로
 
 ### ADR-013. `USER_ID`를 "공개 핸들"로 재정의
 
@@ -736,6 +737,17 @@
   - 매퍼 파라미터가 하나씩 늘고, SQL 만 읽어서는 기준 시각이 안 보인다(부르는 쪽을 봐야 한다)
   - 서버가 여러 대가 되면 서버마다 시계가 조금씩 다르다 — 지금은 한 대(ADR-002). 늘면 NTP 를 전제로 다시 본다
 - **구현** — `UserMapper` 의 `NOW()` 다섯 곳(마지막 로그인 · 탈퇴 · 파기 대상 · 파기 재확인 두 곳)을 `#{lastLoginAt}` · `#{withdrawnAt}` · `#{purgeBefore}` 로. `LocalDateTime.now()` 를 `Clock` 주입으로 바꾸는 건 단위 테스트를 시작할 때
+
+### ADR-061. API 에러 본문은 ProblemDetail(RFC 9457) (2026-10-12)
+
+- **문제** — API 에러 본문이 글자뿐이었다(ADR-012). 지금 화면은 status 로만 판단해서(`transaction.js` 409·404) 문제는 없지만, 형식이 우리만의 약속이라 남이 보면 설명이 필요하고 필드를 더할 자리가 없다
+- **대안** — 글자 유지(필요해지는 날 바꾸기) / 자체 JSON `{code, message}` / **ProblemDetail(RFC 9457)**
+- **선택** — ProblemDetail. 실무 표준이고 스프링 6+ 에 내장(`ProblemDetail.forStatusAndDetail`)
+  - 본문 `{type, title, status, detail, instance}`, Content-Type `application/problem+json`. 사람에게 보여 줄 문구는 `detail`
+  - 나가는 곳 셋 — `GlobalExceptionHandler`(컨트롤러 안) · `CustomErrorController` 의 `/api` 갈래(`/error` 로 넘어온 것) · `SecurityConfig` 401(필터라 핸들러 밖 — 같은 모양을 직접 쓴다)
+  - 받는 곳 하나 — `apiClient.js` `readErrorMessage` 가 `detail` 을 꺼내 `error.message` 로. 화면 스크립트는 그대로
+  - 같은 status 를 화면이 구분해야 할 때 `code` 같은 확장 필드를 더한다(`setProperty`) — 지금은 쓰는 곳이 없어 넣지 않는다
+- **감수** — 응답이 조금 길어진다. QA 의 문구 검사(`has`)는 본문 안 글자를 찾으므로 그대로 통과
 
 ## 공동 가계부 (Sprint 4 예정)
 
