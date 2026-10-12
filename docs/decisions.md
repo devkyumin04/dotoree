@@ -257,6 +257,8 @@
 
 ### ADR-035. 예외 클래스는 도메인별로 분리
 
+> **폐기 (2026-10-12)** — 도메인별 클래스 대신 `ErrorCode` enum + `BusinessException` 하나로 바꿨다(ADR-062). 아래 "감수"에 적은 재검토를 Sprint 4 전에 당긴 것. 로그에서 출처 식별은 enum 이름이 맡는다
+
 - **문제** — 거래의 404/403/409에 어떤 예외를 쓸 것인가
 - **대안** — 도메인별 신규 클래스 / 공용 `NotFoundException`·`AccessDeniedException`으로 통합
 - **선택** — 도메인별. `TransactionNotFoundException`, `InvalidTransactionAccessException`, `TransactionConflictException`
@@ -331,6 +333,8 @@
   통계 요청만 실패하면 화면이 갱신되지 않는다 — 조회 실패 처리(뷰 대공사)와 같이
 
 ### ADR-041. 설계 기준은 "바꿀 때 싸게 바뀌는가" — 리팩토링은 다음 변경 직전에
+
+> **일부 폐기 (2026-10-12)** — 아래 "예외: 의미별 부모(NotFound/Forbidden/Conflict/BadRequest)" 항목은 ADR-062 로 대체한다. 기준(바꿀 때 싸게 바뀌는가)과 나머지 항목은 그대로 유효
 
 - **문제** — 서버/뷰를 나누는 데 집착하는 게 좋은 설계인가 하는 의문. 나누는 것 말고 설계를 판단할 기준이 필요했다
 - **선택** — 기준을 둘로 둔다. ① 바꿀 때 싸게 바뀌는가(ETC) ② 서버는 진실, 뷰는 보여주기(SSOT, ADR-038·040). ②는 ①의 수단이고 부딪히면 ①이 이긴다
@@ -748,6 +752,21 @@
   - 받는 곳 하나 — `apiClient.js` `readErrorMessage` 가 `detail` 을 꺼내 `error.message` 로. 화면 스크립트는 그대로
   - 같은 status 를 화면이 구분해야 할 때 `code` 같은 확장 필드를 더한다(`setProperty`) — 지금은 쓰는 곳이 없어 넣지 않는다
 - **감수** — 응답이 조금 길어진다. QA 의 문구 검사(`has`)는 본문 안 글자를 찾으므로 그대로 통과
+
+### ADR-062. 도메인 예외는 `ErrorCode` enum + `BusinessException` 하나 (2026-10-12)
+
+- **문제** — 한 에러의 정보가 두 곳에 나뉘어 있었다. 상태 코드는 핸들러가 부모 타입(NotFound 등)을 보고 정하고, 문구는 `throw` 하는 줄마다 따로 적었다. 그래서 같은 "거래 없음"이 줄마다 `!` 가 붙었다 말았다 했고, 예외 하나에 클래스 파일 하나가 필요했다(부모 4 + 자식 12)
+- **대안** — 클래스 계층 유지 + 문구만 상수로 / **`ErrorCode` enum + `BusinessException`**(스프링 실무에서 흔한 방식)
+- **선택** — enum. 한 줄에 상태 코드와 문구를 같이 둔다 — `TRANSACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 거래내역입니다.")`
+  - 던질 땐 `throw new BusinessException(ErrorCode.TRANSACTION_NOT_FOUND)`. 핸들러는 `BusinessException` 하나만 받아 `ErrorCode` 의 상태로 ProblemDetail(ADR-061)을 만든다 — 새 에러는 enum 한 줄, 핸들러는 안 는다
+  - 요청마다 문구가 달라지는 에러(잠금의 남은 분)는 `new BusinessException(ErrorCode.ACCOUNT_LOCKED, 문구)` — 상태는 enum, 문구는 부르는 쪽
+  - 401·423 도 enum 한 줄이 됐다 — "자식이 하나뿐이라 부모 없이" 둔 예외가 따로 남지 않는다
+  - 문구를 한 곳에 모으면서 끝의 `!` 는 `.` 로, 소유권 403 은 카테고리·거래 하나씩으로 합쳤다(화면에선 안 보이고 API 를 조작할 때만 나온다)
+- **같이 바꾼 것 — "거절해도 남아야 하는 기록"을 예외 종류에서 떼어 냄**
+  - 스프링의 `@Transactional(noRollbackFor)` 은 클래스로만 고른다 — 봉투가 `BusinessException` 하나가 되면 "로그인 거절만 커밋"을 고를 수 없다. `noRollbackFor = BusinessException.class` 로 두면 지금은 같게 돌지만, 그 메서드에 롤백해야 하는 에러를 새로 넣는 순간 그것도 커밋된다(리뷰에서 "커밋 여부가 예외 종류에 묶여 있다"로 지적받는 모양)
+  - 로그인 — 실패 기록(만료 잠금 풀기 · 실패 +1 · 잠금)을 `LoginAttemptService` 로 옮기고 `REQUIRES_NEW`(따로 열고 바로 커밋). `login()` 은 보통 `@Transactional` — 어떤 에러든 롤백되고 실패 기록만 남는다. 만료 잠금 풀기까지 옮긴 이유는 바깥이 그 줄을 잠근 채로 안쪽이 같은 줄을 쓰면 서로 기다리기(데드락) 때문. 다른 클래스인 이유는 같은 클래스 안 호출은 프록시를 안 거쳐 `REQUIRES_NEW` 가 무시돼서
+  - 재발급 — 거절을 예외 대신 빈 `Optional` 로 돌려주고 401 은 컨트롤러가 던진다(트랜잭션이 커밋된 뒤). 재사용 탐지의 패밀리 폐기가 남는다. 로그인처럼 `REQUIRES_NEW` 로 떼지 않은 이유 — 유예(30초)의 "폐기 + 새 카드 한 장"이 한 트랜잭션이어야 동시 재발급 두 개가 같은 줄 잠금에서 차례를 기다린다(떼면 두 번째 요청이 살아 있는 카드 0장을 보고 401 → 로그인 화면)
+- **감수** — `catch` 로 특정 에러 하나만 고르려면 `getErrorCode()` 를 비교해야 한다(지금 그런 `catch` 는 없다) · 로그인 실패 한 번에 DB 연결을 잠깐 두 개 쓴다(`REQUIRES_NEW`, 풀 10개에 비해 작다) · 실패 기록이 바깥보다 먼저 커밋되므로, 비번이 틀린 요청이 뒤에서 고장(DB 오류)으로 죽어도 +1 은 남는다(실패한 시도는 맞으니 문제 아님)
 
 ## 공동 가계부 (Sprint 4 예정)
 

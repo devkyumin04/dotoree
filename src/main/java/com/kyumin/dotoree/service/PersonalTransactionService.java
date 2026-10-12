@@ -10,11 +10,8 @@ import com.kyumin.dotoree.domain.PersonalCategory;
 import com.kyumin.dotoree.domain.PersonalTransaction;
 import com.kyumin.dotoree.dto.PersonalTransactionRequestDto;
 import com.kyumin.dotoree.dto.PersonalTransactionResponseDto;
-import com.kyumin.dotoree.exception.CategoryNotFoundException;
-import com.kyumin.dotoree.exception.InvalidCategoryAccessException;
-import com.kyumin.dotoree.exception.InvalidTransactionAccessException;
-import com.kyumin.dotoree.exception.TransactionConflictException;
-import com.kyumin.dotoree.exception.TransactionNotFoundException;
+import com.kyumin.dotoree.exception.BusinessException;
+import com.kyumin.dotoree.exception.ErrorCode;
 import com.kyumin.dotoree.mapper.PersonalCategoryMapper;
 import com.kyumin.dotoree.mapper.PersonalTransactionMapper;
 
@@ -28,7 +25,7 @@ public class PersonalTransactionService {
 	 *    Controller = HTTP 입출력만 / Mapper = SQL만 / Service = 규칙
 	 *
 	 *  확정된 설계 (docs/decisions.md 참고)
-	 *    - 예외는 도메인별로 분리 : TransactionNotFound / InvalidTransactionAccess
+	 *    - 예외는 ErrorCode 로 구분 : TRANSACTION_NOT_FOUND / TRANSACTION_ACCESS_DENIED (ADR-062)
 	 *                              / TransactionConflict  (ADR-035)
 	 *    - insert 직후 version 은 서비스에서 0 을 직접 세팅  (ADR-036)
 	 *    - TRANS_TYPE 은 클라이언트가 안 보냄. 카테고리에서 파생  (ADR-008)
@@ -51,8 +48,8 @@ public class PersonalTransactionService {
 	 *
 	 * [카테고리 검증]
 	 * 1. personalCategoryMapper.findByCategoryNum(requestDto.getCategoryNum())
-	 * 2. null 이면            → CategoryNotFoundException          (404)
-	 * 3. 내 카테고리가 아니면 → InvalidCategoryAccessException      (403)
+	 * 2. null 이면            → CATEGORY_NOT_FOUND          (404)
+	 * 3. 내 카테고리가 아니면 → CATEGORY_ACCESS_DENIED      (403)
 	 *      category.getUserNum() 과 userNum 비교
 	 *
 	 * [도메인 객체 만들기]
@@ -86,11 +83,11 @@ public class PersonalTransactionService {
 		PersonalCategory category = personalCategoryMapper.findByCategoryNum(requestDto.getCategoryNum());
 		
 		if(category == null) {
-			throw new CategoryNotFoundException("존재하지 않는 카테고리입니다!");
+			throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
 		}
 		
 		if(!category.getUserNum().equals(userNum)) {
-			throw new InvalidCategoryAccessException("본인의 카테고리만 생성 가능합니다");
+			throw new BusinessException(ErrorCode.CATEGORY_ACCESS_DENIED);
 		}
 		
 		PersonalTransaction transaction = new PersonalTransaction();
@@ -124,13 +121,13 @@ public class PersonalTransactionService {
 	 *
 	 * [거래 검증]
 	 * 1. personalTransactionMapper.findByTransNum(transNum)
-	 * 2. null 이면          → TransactionNotFoundException          (404)
+	 * 2. null 이면          → TRANSACTION_NOT_FOUND          (404)
 	 *      매퍼가 use_yn = 'Y' 로 거르므로 이미 삭제된 건도 여기서 null 이 된다
-	 * 3. 내 거래가 아니면   → InvalidTransactionAccessException      (403)
+	 * 3. 내 거래가 아니면   → TRANSACTION_ACCESS_DENIED      (403)
 	 *
 	 * [실행 + 충돌 판정]
 	 * 4. int affected = personalTransactionMapper.deleteTransaction(transNum, version)
-	 * 5. affected == 0 이면 → TransactionConflictException           (409)
+	 * 5. affected == 0 이면 → TRANSACTION_CONFLICT           (409)
 	 *
 	 *    0 이 의미하는 것
 	 *      3번에서 거래가 존재하는 걸 이미 확인했다.
@@ -143,17 +140,17 @@ public class PersonalTransactionService {
 		PersonalTransaction transaction = personalTransactionMapper.findByTransNum(transNum);
 		
 		if(transaction == null) {
-			throw new TransactionNotFoundException("존재하지 않는 거래내역입니다!");
+			throw new BusinessException(ErrorCode.TRANSACTION_NOT_FOUND);
 		}
 		
 		if(!transaction.getUserNum().equals(userNum)) {
-			throw new InvalidTransactionAccessException("자신의 거래내역만 삭제 가능합니다!");
+			throw new BusinessException(ErrorCode.TRANSACTION_ACCESS_DENIED);
 		}
 		
 		int affected = personalTransactionMapper.deleteTransaction(transNum, version);
 		
 		if(affected == 0) {
-			throw new TransactionConflictException("다른 곳에서 이미 변경된 내역입니다. 새로고침 후 다시 시도해주세요");
+			throw new BusinessException(ErrorCode.TRANSACTION_CONFLICT);
 		}
 		
 	}
@@ -162,12 +159,12 @@ public class PersonalTransactionService {
 	/* ── ④ 수정 ───────────────────────────────────────────────────
 	 *
 	 * [거래 검증]
-	 * 1. findByTransNum → null 이면 TransactionNotFoundException      (404)
-	 * 2. 내 거래가 아니면          InvalidTransactionAccessException  (403)
+	 * 1. findByTransNum → null 이면 TRANSACTION_NOT_FOUND      (404)
+	 * 2. 내 거래가 아니면          TRANSACTION_ACCESS_DENIED  (403)
 	 *
 	 * [카테고리 검증]  ← 바꿀 카테고리도 검증해야 한다
-	 * 3. findByCategoryNum → null 이면 CategoryNotFoundException      (404)
-	 * 4. 내 카테고리가 아니면         InvalidCategoryAccessException  (403)
+	 * 3. findByCategoryNum → null 이면 CATEGORY_NOT_FOUND      (404)
+	 * 4. 내 카테고리가 아니면         CATEGORY_ACCESS_DENIED  (403)
 	 *
 	 * [값 채우기]
 	 * 5. 1번에서 조회한 거래 객체에 requestDto 값들을 세팅
@@ -186,7 +183,7 @@ public class PersonalTransactionService {
 	 *
 	 * [실행 + 충돌 판정]
 	 * 6. int affected = personalTransactionMapper.updateTransaction(t)
-	 * 7. affected == 0 이면 → TransactionConflictException            (409)
+	 * 7. affected == 0 이면 → TRANSACTION_CONFLICT            (409)
 	 *
 	 * [응답]
 	 * 8. ResponseDto 로 변환해서 반환
@@ -201,21 +198,21 @@ public class PersonalTransactionService {
 		PersonalTransaction transaction = personalTransactionMapper.findByTransNum(transNum);
 		
 		if(transaction == null) {
-			throw new TransactionNotFoundException("존재하지 않는 거래내역입니다");
+			throw new BusinessException(ErrorCode.TRANSACTION_NOT_FOUND);
 		}
 		
 		if(!transaction.getUserNum().equals(userNum)) {
-			throw new InvalidTransactionAccessException("자신의 거래내역만 수정 가능합니다!");
+			throw new BusinessException(ErrorCode.TRANSACTION_ACCESS_DENIED);
 		}
 		
 		PersonalCategory category = personalCategoryMapper.findByCategoryNum(requestDto.getCategoryNum());
 		
 		if(category == null) {
-			throw new CategoryNotFoundException("존재하지 않는 카테고리입니다!");
+			throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
 		}
 		
 		if(!category.getUserNum().equals(userNum)) {
-			throw new InvalidCategoryAccessException("본인의 카테고리만 수정 가능합니다");
+			throw new BusinessException(ErrorCode.CATEGORY_ACCESS_DENIED);
 		}
 		
 		transaction.setCategoryNum(requestDto.getCategoryNum());
@@ -228,7 +225,7 @@ public class PersonalTransactionService {
 		int affected = personalTransactionMapper.updateTransaction(transaction);
 		
 		if(affected == 0) {
-			throw new TransactionConflictException("다른 곳에서 이미 수정된 내역입니다! 새로고침 후 다시 시도해주세요.");
+			throw new BusinessException(ErrorCode.TRANSACTION_CONFLICT);
 		}
 		
 		PersonalTransactionResponseDto responseDto = new PersonalTransactionResponseDto();

@@ -18,11 +18,8 @@ import com.kyumin.dotoree.dto.PasswordConfirmRequestDto;
 import com.kyumin.dotoree.dto.SignupRequestDto;
 import com.kyumin.dotoree.dto.SignupResponseDto;
 import com.kyumin.dotoree.dto.UserInfoResponseDto;
-import com.kyumin.dotoree.exception.AccountLockedException;
-import com.kyumin.dotoree.exception.DuplicateEmailException;
-import com.kyumin.dotoree.exception.InvalidCredentialsException;
-import com.kyumin.dotoree.exception.PasswordMismatchException;
-import com.kyumin.dotoree.exception.SamePasswordException;
+import com.kyumin.dotoree.exception.BusinessException;
+import com.kyumin.dotoree.exception.ErrorCode;
 import com.kyumin.dotoree.mapper.PersonalCategoryMapper;
 import com.kyumin.dotoree.mapper.UserMapper;
 import com.kyumin.dotoree.security.JwtTokenProvider;
@@ -38,11 +35,7 @@ public class UserService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PersonalCategoryMapper personalCategoryMapper;
 	private final RefreshTokenService refreshTokenService;
-
-    // 없음·불일치·파기됨을 한 문구로 — 어느 쪽인지 알려 주지 않는다 (계정 존재 비노출은 가입 409 때문에 이미 반쪽이지만, 굳이 더 열지 않는다)
-    private static final String LOGIN_FAIL_MESSAGE = "이메일 또는 비밀번호가 일치하지 않습니다.";
-	// 로그인한 사용자의 계정이 없을 때(탈퇴·파기 뒤 남은 토큰) — 401 문구 하나로
-	private static final String USER_NOT_FOUND_MESSAGE = "사용자를 찾을 수 없습니다.";
+	private final LoginAttemptService loginAttemptService;
 
 	private static final int MAX_FAIL_COUNT = 5;
 	private static final int LOCK_MINUTES = 30;
@@ -52,7 +45,7 @@ public class UserService {
         User existingUser = userMapper.findByEmail(requestDto.getEmail());
 
         if (existingUser != null) {
-            throw new DuplicateEmailException("이미 사용 중인 이메일입니다.");
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
 
         String encodedPassword = passwordEncoder.encode(requestDto.getPassword());
@@ -90,39 +83,36 @@ public class UserService {
         personalCategoryMapper.insertCategory(category);
     }
     
-	// 실패 횟수를 올린 뒤 401·423 을 던진다. 기본 규칙(예외 = 롤백)이면 그 +1 이 되돌려져 잠금이 영영 안 걸린다.
-	// 두 예외는 고장이 아니라 "거절" — 거절 기록은 남기고, 진짜 고장(DB 오류 등)만 롤백 (RefreshTokenService.refresh 와 같은 생각)
-	@Transactional(noRollbackFor = { InvalidCredentialsException.class, AccountLockedException.class })
+	// 실패 횟수를 올린 뒤 401·423 을 던진다. 예외 = 롤백이라, 여기서 +1 을 쓰면 되돌려져 잠금이 영영 안 걸린다
+	// → 실패 기록(잠금 풀기 · +1 · 잠금)은 LoginAttemptService 가 따로 커밋하고, 이 메서드는 보통 트랜잭션 (ADR-062)
+	@Transactional
 	public LoginResult login(LoginRequestDto requestDto) {
 
         User loginUser = userMapper.findByEmail(requestDto.getEmail());
 
         if(loginUser == null) {
-        	throw new InvalidCredentialsException(LOGIN_FAIL_MESSAGE);
+        	throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
 		LocalDateTime now = LocalDateTime.now();
 		if (loginUser.getLockedUntil() != null) {
 			if (loginUser.getLockedUntil().isAfter(now)) {
-				throw new AccountLockedException(buildLockedMessage(loginUser.getLockedUntil(), now));
+				throw new BusinessException(ErrorCode.ACCOUNT_LOCKED, buildLockedMessage(loginUser.getLockedUntil(), now));
 			} else {
-				userMapper.resetLoginFail(loginUser.getUserNum());
+				loginAttemptService.resetLoginFail(loginUser.getUserNum());
 			}
 		}
 
         boolean isPasswordMatch = passwordEncoder.matches(requestDto.getPassword(), loginUser.getUserPw());
 
         if (!isPasswordMatch) {
-			userMapper.increaseLoginFailCount(loginUser.getUserNum());
-
 			LocalDateTime lockedUntil = now.plusMinutes(LOCK_MINUTES);
-			int lockedRows = userMapper.lockIfFailLimitReached(loginUser.getUserNum(), lockedUntil,
-					MAX_FAIL_COUNT);
-			if (lockedRows == 1) {
-				throw new AccountLockedException(buildLockedMessage(lockedUntil, now));
+			boolean locked = loginAttemptService.recordFailure(loginUser.getUserNum(), lockedUntil, MAX_FAIL_COUNT);
+			if (locked) {
+				throw new BusinessException(ErrorCode.ACCOUNT_LOCKED, buildLockedMessage(lockedUntil, now));
 			}
 
-			throw new InvalidCredentialsException(LOGIN_FAIL_MESSAGE);
+			throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
 		// 유예 중(파기 전) 탈퇴 계정의 로그인 = 탈퇴 취소 (ADR-052). 비밀번호 확인 뒤에만 복구한다.
@@ -131,7 +121,7 @@ public class UserService {
 			int restoredRows = userMapper.restore(loginUser.getUserNum());
 
 			if (restoredRows == 0) {
-				throw new InvalidCredentialsException(LOGIN_FAIL_MESSAGE);
+				throw new BusinessException(ErrorCode.LOGIN_FAILED);
 			}
 		}
 
@@ -160,13 +150,13 @@ public class UserService {
 	// 막는 것: 로그인된 채 둔 화면을 남이 여는 것. 토큰을 가진 사람이 API 를 직접 부르는 건 못 막는다 —
 	//         그래서 비밀번호 변경·탈퇴는 이 관문과 별개로 각자 비밀번호를 다시 받는다 (닉네임은 피해가 작아 받지 않는다)
 	public void verifyPassword(Integer userNum, PasswordConfirmRequestDto requestDto) {
-		checkPassword(userNum, requestDto.getPassword(), "비밀번호가 일치하지 않습니다");
+		checkPassword(userNum, requestDto.getPassword(), ErrorCode.PASSWORD_MISMATCH);
 	}
 
     public UserInfoResponseDto updateNickname(Integer userNum, NicknameRequestDto requestDto) {
 
         if (userMapper.updateNickname(userNum, requestDto.getNickname()) == 0) {
-            throw new InvalidCredentialsException(USER_NOT_FOUND_MESSAGE);
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
         return getMyInfo(userNum);
     }
@@ -177,12 +167,12 @@ public class UserService {
 	// @Transactional — 비번만 바뀌고 폐기가 실패하면 도둑의 카드가 산다. 둘 다 되거나 둘 다 안 되게(실패하면 사용자가 다시 시도)
 	@Transactional
 	public void changePassword(Integer userNum, PasswordChangeRequestDto requestDto) {
-		checkPassword(userNum, requestDto.getCurrentPassword(), "현재 비밀번호가 일치하지 않습니다.");
+		checkPassword(userNum, requestDto.getCurrentPassword(), ErrorCode.CURRENT_PASSWORD_MISMATCH);
 		
 		// 현재 비번은 바로 위에서 맞다고 확인됐으니 원문끼리 비교하면 된다 (해시를 다시 돌릴 필요 없음).
 		// 왼쪽에 현재 비번 — 위 확인을 통과했으니 null 이 아니다 (@Valid @NotBlank 도 막는다)
 		if (requestDto.getCurrentPassword().equals(requestDto.getNewPassword())) {
-			throw new SamePasswordException("현재 비밀번호와 다른 비밀번호를 입력해주세요.");
+			throw new BusinessException(ErrorCode.SAME_PASSWORD);
 		}
 		
 		String encodedPassword = passwordEncoder.encode(requestDto.getNewPassword());
@@ -190,7 +180,7 @@ public class UserService {
 		// 0행 = 확인과 UPDATE 사이에 탈퇴·파기된 계정 → 없는 사용자로 취급(401)
 		int updatedRows = userMapper.updatePassword(userNum, encodedPassword);
 		if (updatedRows == 0) {
-			throw new InvalidCredentialsException(USER_NOT_FOUND_MESSAGE);
+			throw new BusinessException(ErrorCode.USER_NOT_FOUND);
 		}
 
 		refreshTokenService.revokeAllOfUser(userNum);
@@ -204,12 +194,12 @@ public class UserService {
 	@Transactional
 	public void withdraw(Integer userNum, PasswordConfirmRequestDto requestDto) {
 
-		checkPassword(userNum, requestDto.getPassword(), "비밀번호가 일치하지 않습니다.");
+		checkPassword(userNum, requestDto.getPassword(), ErrorCode.PASSWORD_MISMATCH);
 
 		// 'A' 인 계정만 바뀐다. 0행 = 이미 탈퇴한 계정의 남은 토큰 → 없는 사용자로 취급
 		int withdrawnRows = userMapper.withdraw(userNum, LocalDateTime.now());
 		if (withdrawnRows == 0) {
-			throw new InvalidCredentialsException(USER_NOT_FOUND_MESSAGE);
+			throw new BusinessException(ErrorCode.USER_NOT_FOUND);
 		}
 		refreshTokenService.revokeAllOfUser(userNum);
 	}
@@ -234,19 +224,19 @@ public class UserService {
 
 	// 로그인한 사용자의 비밀번호 재확인 — 관문·비번 변경·탈퇴가 같이 쓴다
 	// void + 예외 — boolean 을 돌려주면 부르는 쪽마다 if 가 필요하고, 하나라도 빠뜨리면 틀린 비번이 조용히 통과한다
-	// 비번 틀림은 400(PasswordMismatchException) — 401 이면 apiClient.js 가 만료로 보고 재발급·재시도 뒤 로그인 화면으로 보낸다(오타 한 번에 로그아웃)
+	// 비번 틀림은 400(PASSWORD_MISMATCH) — 401 이면 apiClient.js 가 만료로 보고 재발급·재시도 뒤 로그인 화면으로 보낸다(오타 한 번에 로그아웃)
 	// 계정 없음(탈퇴·파기 뒤 남은 토큰)은 401 — 그땐 로그인 화면으로 보내는 게 맞다
-	// 문구는 부르는 쪽이 정한다 — 비번 변경은 칸이 둘(현재·새)이라 "현재 비밀번호가…" 로 어느 칸인지 알린다
-	private void checkPassword(Integer userNum, String rawPassword, String mismatchMessage) {
+	// 어느 ErrorCode 인지는 부르는 쪽이 정한다 — 비번 변경은 칸이 둘(현재·새)이라 "현재 비밀번호가…" 로 어느 칸인지 알린다
+	private void checkPassword(Integer userNum, String rawPassword, ErrorCode mismatchCode) {
 
 		User user = userMapper.findByUserNum(userNum);
 
 		if (user == null) {
-			throw new InvalidCredentialsException(USER_NOT_FOUND_MESSAGE);
+			throw new BusinessException(ErrorCode.USER_NOT_FOUND);
 		}
 
 		if (!passwordEncoder.matches(rawPassword, user.getUserPw())) {
-			throw new PasswordMismatchException(mismatchMessage);
+			throw new BusinessException(mismatchCode);
 		}
 	}
 
@@ -255,7 +245,7 @@ public class UserService {
         User user = userMapper.findByUserNum(userNum);
 
         if (user == null) {
-            throw new InvalidCredentialsException(USER_NOT_FOUND_MESSAGE);
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
         return new UserInfoResponseDto(

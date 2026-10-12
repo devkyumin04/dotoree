@@ -13,10 +13,8 @@ import lombok.RequiredArgsConstructor;
 import com.kyumin.dotoree.domain.PersonalCategory;
 import com.kyumin.dotoree.dto.CategoryRequestDto;
 import com.kyumin.dotoree.dto.CategoryResponseDto;
-import com.kyumin.dotoree.exception.CategoryNotFoundException;
-import com.kyumin.dotoree.exception.InvalidCategoryAccessException;
-import com.kyumin.dotoree.exception.InvalidCategoryHierarchyException;
-import com.kyumin.dotoree.exception.ReservedCategoryNameException;
+import com.kyumin.dotoree.exception.BusinessException;
+import com.kyumin.dotoree.exception.ErrorCode;
 import com.kyumin.dotoree.mapper.PersonalCategoryMapper;
 import com.kyumin.dotoree.mapper.PersonalTransactionMapper;
 
@@ -30,7 +28,7 @@ public class PersonalCategoryService {
     public CategoryResponseDto createCategory(Integer userNum, CategoryRequestDto requestDto) {
     	
     	if (PersonalCategory.DEFAULT_CATEGORY_NAME.equals(requestDto.getCategoryName())) {
-    	    throw new ReservedCategoryNameException("사용할 수 없는 카테고리 이름입니다.");
+    	    throw new BusinessException(ErrorCode.RESERVED_CATEGORY_NAME);
     	}
     	
     	validateParent(userNum, requestDto.getParentCategoryNum(), requestDto.getCategoryType(), null);
@@ -65,14 +63,14 @@ public class PersonalCategoryService {
     
     private void validateParent(Integer userNum, Integer parentNum, String categoryType, Integer selfNum) {
         if (parentNum == null) return;                                   // 대분류
-        if (selfNum != null && parentNum.equals(selfNum)) throw new InvalidCategoryHierarchyException("자기 자신을 상위로 지정할 수 없습니다");     // 자기 자신 (조회 전)
+        if (selfNum != null && parentNum.equals(selfNum)) throw new BusinessException(ErrorCode.CATEGORY_SELF_PARENT);     // 자기 자신 (조회 전)
 
         PersonalCategory parent = personalCategoryMapper.findByCategoryNum(parentNum);
-        if (parent == null) throw new CategoryNotFoundException("존재하지 않는 카테고리입니다!");
-        if (!parent.getUserNum().equals(userNum)) throw new InvalidCategoryAccessException("본인의 카테고리만 상위로 지정할 수 있습니다!");
-        if (!parent.getCategoryType().equals(categoryType)) throw new InvalidCategoryHierarchyException("카테고리 타입이 불일치합니다!");
-        if (parent.getParentCategoryNum() != null) throw new InvalidCategoryHierarchyException("카테고리는 2단계까지만 가능합니다");            // 부모가 소분류 → 3계층
-        if ("Y".equals(parent.getIsDefaultYn())) throw new InvalidCategoryHierarchyException("기본 카테고리 아래에는 만들 수 없습니다");              // 미분류 아래
+        if (parent == null) throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
+        if (!parent.getUserNum().equals(userNum)) throw new BusinessException(ErrorCode.CATEGORY_ACCESS_DENIED);
+        if (!parent.getCategoryType().equals(categoryType)) throw new BusinessException(ErrorCode.CATEGORY_TYPE_MISMATCH);
+        if (parent.getParentCategoryNum() != null) throw new BusinessException(ErrorCode.CATEGORY_DEPTH_EXCEEDED);            // 부모가 소분류 → 3계층
+        if ("Y".equals(parent.getIsDefaultYn())) throw new BusinessException(ErrorCode.CATEGORY_UNDER_DEFAULT);              // 미분류 아래
     }
 
     public List<CategoryResponseDto> getCategories(Integer userNum) {
@@ -93,28 +91,28 @@ public class PersonalCategoryService {
     public CategoryResponseDto updateCategory(Integer userNum, Integer categoryNum, CategoryRequestDto requestDto) {
     	
     	if (PersonalCategory.DEFAULT_CATEGORY_NAME.equals(requestDto.getCategoryName())) {
-    	    throw new ReservedCategoryNameException("사용할 수 없는 카테고리 이름입니다.");
+    	    throw new BusinessException(ErrorCode.RESERVED_CATEGORY_NAME);
     	}
     	
         PersonalCategory category = personalCategoryMapper.findByCategoryNum(categoryNum);
 
         if (category == null) {
-            throw new CategoryNotFoundException("존재하지 않는 카테고리입니다!");
+            throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
         }
 
         if (!category.getUserNum().equals(userNum)) {
-            throw new InvalidCategoryAccessException("본인의 카테고리만 수정할 수 있습니다!");
+            throw new BusinessException(ErrorCode.CATEGORY_ACCESS_DENIED);
         }
 
         if ("Y".equals(category.getIsDefaultYn())) {
-            throw new InvalidCategoryAccessException("기본카테고리는 수정 불가능합니다!");
+            throw new BusinessException(ErrorCode.DEFAULT_CATEGORY_NOT_EDITABLE);
         }
         
         validateParent(userNum, requestDto.getParentCategoryNum(), category.getCategoryType(), categoryNum);
 
         boolean hasChildren = personalCategoryMapper.countChildren(categoryNum) > 0;
         if (requestDto.getParentCategoryNum() != null && hasChildren) {
-            throw new InvalidCategoryHierarchyException("하위 카테고리가 있으면 소분류로 바꿀 수 없습니다.");
+            throw new BusinessException(ErrorCode.CATEGORY_HAS_CHILDREN_TO_SUB);
         }
         
         // 값 채우기 (requestDto의 값으로 category 객체 업데이트)
@@ -134,20 +132,20 @@ public class PersonalCategoryService {
         PersonalCategory category = personalCategoryMapper.findByCategoryNum(categoryNum);
 
         if (category == null) {
-            throw new CategoryNotFoundException("존재하지 않는 카테고리입니다!");
+            throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
         }
 
         if (!category.getUserNum().equals(userNum)) {
-            throw new InvalidCategoryAccessException("본인의 카테고리만 삭제할 수 있습니다!");
+            throw new BusinessException(ErrorCode.CATEGORY_ACCESS_DENIED);
         }
 
         // '미분류' 카테고리는 삭제 불가 
         if ("Y".equals(category.getIsDefaultYn())) {
-        	throw new InvalidCategoryAccessException("기본카테고리는 삭제 불가능합니다!");
+        	throw new BusinessException(ErrorCode.DEFAULT_CATEGORY_NOT_DELETABLE);
         }
 
         if (personalCategoryMapper.countChildren(categoryNum) > 0) {
-            throw new InvalidCategoryHierarchyException("하위 카테고리를 먼저 삭제해주세요.");
+            throw new BusinessException(ErrorCode.CATEGORY_HAS_CHILDREN);
         }
         
         //미분류 카테고리는 singup에서 항상 생성, sql로 직접 넣은 유저만 null
