@@ -1,5 +1,7 @@
 package com.kyumin.dotoree.exception;
 
+import java.security.Principal;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -24,7 +27,12 @@ public class GlobalExceptionHandler {
     //    새 에러가 생겨도 ErrorCode 에 한 줄 — 여기는 안 는다
 
     @ExceptionHandler(BusinessException.class)
-    public ProblemDetail handleBusiness(BusinessException e) {
+    public ProblemDetail handleBusiness(BusinessException e, HttpServletRequest request) {
+        // 4xx 는 요청 쪽 잘못이라 스택 없이 warn 한 줄 — 왜(ErrorCode 이름) · 무엇을(메서드·경로) · 누가(userNum, 비로그인은 -) (ADR-063)
+        // 이메일·비번 같은 요청 값은 안 남긴다. 스택까지 남기는 건 아래 500 하나
+        Principal user = request.getUserPrincipal();
+        log.warn("{} {} {} user={}", e.getErrorCode().name(), request.getMethod(), request.getRequestURI(),
+                user == null ? "-" : user.getName());
         return ProblemDetail.forStatusAndDetail(e.getErrorCode().getStatus(), e.getMessage());
     }
 
