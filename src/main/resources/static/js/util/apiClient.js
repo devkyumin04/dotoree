@@ -24,8 +24,7 @@ async function apiRequest(url, method, body, options = {}) {
     }
 
     if (!response.ok) {
-        const errorText = await response.text();
-        throw { status: response.status, message: errorText };
+        throw { status: response.status, message: await readErrorMessage(response) };
     }
 
     if (response.status === 204) {
@@ -33,6 +32,17 @@ async function apiRequest(url, method, body, options = {}) {
     }
 
     return await response.json();
+}
+
+// 에러 본문은 ProblemDetail(RFC 9457) JSON — 보여 줄 문구는 detail (ADR-061)
+// JSON 이 아니면(Nginx 502 같은 서버 밖 에러) 본문 그대로. 화면은 지금처럼 error.message 만 쓴다
+async function readErrorMessage(response) {
+    const text = await response.text();
+    try {
+        return JSON.parse(text).detail ?? text;
+    } catch {
+        return text;
+    }
 }
 
 function sendRequest(url, method, body, token) {
@@ -84,7 +94,7 @@ async function requestRefresh() {
         return null;
     }
     if (!response.ok) {
-        throw { status: response.status, message: await response.text() };
+        throw { status: response.status, message: await readErrorMessage(response) };
     }
     const data = await response.json();
     localStorage.setItem('accessToken', data.accessToken);
@@ -97,7 +107,7 @@ async function requestRefresh() {
 async function logoutRequest() {
     const response = await fetch('/api/auth/logout', { method: 'POST' });
     if (!response.ok) {
-        throw { status: response.status, message: await response.text() };
+        throw { status: response.status, message: await readErrorMessage(response) };
     }
     localStorage.removeItem('accessToken');
 }
