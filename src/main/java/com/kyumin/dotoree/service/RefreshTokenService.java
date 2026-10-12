@@ -152,9 +152,10 @@ public class RefreshTokenService {
 		refreshTokenMapper.revokeFamily(refreshToken.getFamilyId(), LocalDateTime.now());
 	}
 
-	// 전 세션 폐기 — 비번 변경·탈퇴 때 그 사용자의 카드를 일행 가리지 않고 전부 (ADR-055 선택 16)
-	// 지금 이 기기도 포함 — 비번 변경 뒤엔 화면이 다시 로그인시킨다. 탈퇴는 유예 중('W') 계정이 옛 카드로 재발급받던 구멍을 막는다
-	// @Transactional 없음 — 부르는 쪽(UserService)의 트랜잭션에 들어가 비번·상태 UPDATE 와 같이 커밋·롤백된다
+	// 전 세션 폐기 — 비번 변경·탈퇴 때 그 사용자의 살아 있는 카드를 일행 가리지 않고 전부 (ADR-055 선택 16)
+	// 지금 이 기기도 포함 — 비번을 바꾸는 흔한 이유가 "누가 내 계정을 쓰는 것 같다"라서 모든 기기를 내보낸다. 탈퇴는 유예 중('W') 계정이 옛 카드로 재발급받던 구멍을 막는다
+	// @Transactional 없음 — 쓰는 문장이 UPDATE 하나뿐(한 문장은 그 자체로 원자적). 비번·상태 UPDATE 와 한 묶음으로 만드는 건 부르는 쪽(UserService)의 트랜잭션이다
+	// 시각은 자바가 정해 넘긴다 (ADR-060)
 	public void revokeAllOfUser(Integer userNum) {
 		refreshTokenMapper.revokeAllOfUser(userNum, LocalDateTime.now());
 	}

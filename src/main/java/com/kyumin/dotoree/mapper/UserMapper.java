@@ -19,7 +19,7 @@ public interface UserMapper {
     
     User findByUserNum(@Param("userNum") Integer userNum);
 
-    void updateLastLoginAt(@Param("userNum") Integer userNum);
+    void updateLastLoginAt(@Param("userNum") Integer userNum, @Param("lastLoginAt") LocalDateTime lastLoginAt);
 
 	// 실패 횟수 0 · 잠금 해제
 	void resetLoginFail(@Param("userNum") Integer userNum);
@@ -37,17 +37,17 @@ public interface UserMapper {
 
     // ── 탈퇴 · 복구 · 파기 (ADR-052) ──────────────────────
 	// 사용자 탈퇴, 0행이면 업데이트된 행 없다는 의미(이미 탈퇴한 계정이면 0행)
-	int withdraw(@Param("userNum") Integer userNum);
+	int withdraw(@Param("userNum") Integer userNum, @Param("withdrawnAt") LocalDateTime withdrawnAt);
 
 	// 사용자 복구, 0행이면 업데이트된 행 없다는 의미(이미 복구된 계정이거나 그 사이 파기된 계정이면 0행)
 	int restore(@Param("userNum") Integer userNum);
 
-	// 유예(graceDays일)가 끝난 탈퇴 계정 번호 목록. 대상이 없으면 null 이 아니라 빈 목록
-	List<Integer> findPurgeTargets(@Param("graceDays") int graceDays);
+	// 유예가 끝난 탈퇴 계정 번호 목록 — purgeBefore(= 지금 - 유예 날수, 자바가 계산) 보다 먼저 탈퇴한 계정. 대상이 없으면 null 이 아니라 빈 목록
+	List<Integer> findPurgeTargets(@Param("purgeBefore") LocalDateTime purgeBefore);
 
 	// 파기 직전 재확인 + 행 잠금(FOR UPDATE). 아직 대상이면 번호, 그 사이 복구·재탈퇴됐으면 null → 건너뛴다
 	// 잠금은 트랜잭션이 끝날 때 풀린다 — purgeUser 의 @Transactional 안에서 부른다
-	Integer lockPurgeTarget(@Param("userNum") Integer userNum, @Param("graceDays") int graceDays);
+	Integer lockPurgeTarget(@Param("userNum") Integer userNum, @Param("purgeBefore") LocalDateTime purgeBefore);
 
 	// 물리적 삭제 — 부르는 순서 = FK 순서 (UserService.purgeUser). 이유와 "새 테이블이 생기면" 은 UserMapper.xml
 	void deleteTransactionsOf(@Param("userNum") Integer userNum);

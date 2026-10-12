@@ -24,7 +24,6 @@ public interface RefreshTokenMapper {
 	int revokeFamily(@Param("familyId") String familyId, @Param("revokedAt") LocalDateTime revokedAt);
 
 	// 전 세션 폐기 — 비번 변경·탈퇴 때 그 사용자의 살아 있는 줄을 일행 가리지 않고 전부 폐기 (ADR-055 선택 2·16)
-	// void — 0행(살아 있는 카드가 없음)도 정상이라 반환값으로 가를 게 없다
+	// void — 0행(살아 있는 카드가 원래 없음)이든 n행이든 서비스가 할 일이 같다. 숫자로 가를 게 없다
 	void revokeAllOfUser(@Param("userNum") Integer userNum, @Param("revokedAt") LocalDateTime revokedAt);
-
 }

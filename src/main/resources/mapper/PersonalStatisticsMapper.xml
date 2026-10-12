@@ -39,10 +39,10 @@
 		LEFT JOIN personal_categories p
 		ON c.parent_category_num = p.category_num
 		WHERE t.user_num = #{userNum}
-		AND t.use_yn = 'Y'
+		  AND t.use_yn = 'Y'
 	<![CDATA[
-		AND t.trans_date >= #{startDate}
-		AND t.trans_date < #{endDate}
+		  AND t.trans_date >= #{startDate}
+		  AND t.trans_date < #{endDate}
 	]]>
 		GROUP BY c.category_num
 		ORDER BY amount DESC
@@ -54,10 +54,10 @@
 				SUM(CASE WHEN trans_type = 'E' THEN trans_amount ELSE 0 END) AS totalExpense
 		FROM personal_transactions
 		WHERE user_num = #{userNum}
-		AND use_yn = 'Y'
+		  AND use_yn = 'Y'
 	<![CDATA[
-		AND trans_date >= #{startDate}
-		AND trans_date < #{endDate}
+		  AND trans_date >= #{startDate}
+		  AND trans_date < #{endDate}
 	]]>
 		GROUP BY yearMonth
 		ORDER BY yearMonth

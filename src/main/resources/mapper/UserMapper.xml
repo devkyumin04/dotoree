@@ -32,7 +32,7 @@
 
 	<update id="updateLastLoginAt">
 		UPDATE users
-		SET user_last_login_at = NOW()
+		SET user_last_login_at = #{lastLoginAt}
 		WHERE user_num = #{userNum}
 	</update>
 
@@ -71,11 +71,11 @@
 	</update>
 
 	<!-- ── 탈퇴 · 복구 · 파기 (ADR-052) ─────────────────────
-	     시각은 전부 DB 의 NOW() — 앱과 DB 가 같은 시계를 본다 (ADR-026 3계층이 KST 로 맞춰져 있다) -->
+	     시각은 전부 자바가 정해 넘긴다 — 유예 기준(purgeBefore)도 자바가 계산 (ADR-060) -->
 
 	<update id="withdraw">
 		UPDATE users
-		SET user_status = 'W', user_withdrawn_at = NOW()
+		SET user_status = 'W', user_withdrawn_at = #{withdrawnAt}
 		WHERE user_num = #{userNum}
 		  AND user_status = 'A'
 	</update>
@@ -91,7 +91,7 @@
 		SELECT user_num
 		FROM users
 		WHERE user_status = 'W'
-		  AND user_withdrawn_at &lt; NOW() - INTERVAL #{graceDays} DAY
+		  AND user_withdrawn_at &lt; #{purgeBefore}
 	</select>
 
 	<!-- FOR UPDATE — 파기 트랜잭션이 끝날 때까지 이 행을 잠근다.
@@ -100,7 +100,7 @@
 		SELECT user_num
 		FROM users
 		WHERE user_num = #{userNum}
-		  AND user_withdrawn_at &lt; NOW() - INTERVAL #{graceDays} DAY
+		  AND user_withdrawn_at &lt; #{purgeBefore}
 		  AND user_status = 'W'
 		FOR UPDATE
 	</select>
