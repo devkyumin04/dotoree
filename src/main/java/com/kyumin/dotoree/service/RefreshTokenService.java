@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -16,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.kyumin.dotoree.domain.RefreshToken;
 import com.kyumin.dotoree.dto.RefreshResult;
-import com.kyumin.dotoree.exception.InvalidCredentialsException;
 import com.kyumin.dotoree.mapper.RefreshTokenMapper;
 import com.kyumin.dotoree.security.JwtTokenProvider;
 
@@ -35,9 +35,6 @@ public class RefreshTokenService {
 	// 유예 30초 — 폐기된 카드가 30초 안에 다시 오면 재사용이 아니라 재시도(응답 유실)·탭 두 개 동시 갱신으로 보고 봐준다 (ADR-055 선택 10)
 	// 단, 같은 패밀리에 살아 있는 카드가 있을 때만(②) — 전체 폐기 직후의 부활 시도를 막는다
 	private static final Duration GRACE_PERIOD = Duration.ofSeconds(30);
-
-	// 재발급 실패 문구 하나 — 없음·폐기·만료를 구분해 알려 주지 않는다(어느 쪽인지가 공격자에게 힌트가 된다). 세 곳이 같이 쓴다
-	private static final String REFRESH_FAIL_MESSAGE = "로그인이 만료되었습니다. 다시 로그인해 주세요.";
 
 	// 값을 넣어 선언해서 @RequiredArgsConstructor 생성자 파라미터가 되지 않는다 (빈 주입 대상 아님)
 	private final SecureRandom secureRandom = new SecureRandom();
@@ -59,21 +56,22 @@ public class RefreshTokenService {
 	}
 
 	// 재발급 = 로테이션 — 옛 카드 폐기 + 같은 일행(familyId)으로 새 카드 + 새 Access. 한 트랜잭션 (ADR-055)
-	// 받는 것: 쿠키 원문 / 돌려주는 것: RefreshResult(새 Access + 새 Refresh 원문). 쿠키 굽기·본문은 컨트롤러가
-	// noRollbackFor — 여기서 InvalidCredentials 는 고장이 아니라 "거절". 재사용 탐지로 한 패밀리 폐기는 401 을 내도 남아야 한다(롤백되면 도둑이 새 카드를 들고 남는다)
-	// 다른 거절 경로(없음·만료·동시 재발급 0행)는 던지기 전에 쓴 게 없어 무해. DB 오류 등 다른 예외는 그대로 롤백
-	@Transactional(noRollbackFor = InvalidCredentialsException.class)
-	public RefreshResult refresh(String rawToken) {
+	// 받는 것: 쿠키 원문 / 돌려주는 것: RefreshResult(새 Access + 새 Refresh 원문), 거절이면 빈 Optional. 쿠키 굽기·본문·401 은 컨트롤러가
+	// 거절을 예외가 아니라 빈 값으로 돌려주는 이유 — 재사용 탐지의 패밀리 폐기는 401 을 내도 남아야 한다(롤백되면 도둑이 새 카드를 들고 남는다).
+	// 여기서 던지면 롤백되므로, 정상 반환으로 커밋한 뒤 컨트롤러가 401 을 던진다 (ADR-062)
+	// 폐기를 따로 커밋(REQUIRES_NEW)하지 않는 이유 — 유예(30초)의 "폐기 + 새 카드 한 장"이 한 묶음이어야 동시 재발급 두 개가 같은 줄 잠금에서 차례를 기다린다
+	@Transactional
+	public Optional<RefreshResult> refresh(String rawToken) {
 
 		if (rawToken == null || rawToken.isEmpty()) {
-			throw new InvalidCredentialsException(REFRESH_FAIL_MESSAGE);
+			return Optional.empty();
 		}
 
 		String tokenHash = hash(rawToken);
 		RefreshToken refreshToken = refreshTokenMapper.findByTokenHash(tokenHash);
 
 		if(refreshToken == null) {
-			throw new InvalidCredentialsException(REFRESH_FAIL_MESSAGE);
+			return Optional.empty();
 		}
 		if ("Y".equals(refreshToken.getRevokedYn())) {
 			// 폐기된 카드가 다시 옴 — 재사용 탐지 · 유예 (ADR-055 선택 1·10)
@@ -86,23 +84,23 @@ public class RefreshTokenService {
 				// 아래 정상 재발급 세 줄과 같은 모양 — 세 번째 복제가 생기면 메서드로 뺀다(ADR-041)
 				String rawRefreshToken = issue(refreshToken.getUserNum(), refreshToken.getFamilyId());
 				String accessToken = jwtTokenProvider.createAccessToken(refreshToken.getUserNum());
-				return new RefreshResult(accessToken, rawRefreshToken);
+				return Optional.of(new RefreshResult(accessToken, rawRefreshToken));
 			}
-			// 재사용 탐지 — 일행 전체가 폐기된 채로 커밋된다(noRollbackFor). 주인은 비번으로 다시 로그인
-			throw new InvalidCredentialsException(REFRESH_FAIL_MESSAGE);
+			// 재사용 탐지 — 정상 반환이라 일행 전체가 폐기된 채로 커밋된다. 주인은 비번으로 다시 로그인
+			return Optional.empty();
 		}
 		if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-			throw new InvalidCredentialsException(REFRESH_FAIL_MESSAGE);
+			return Optional.empty();
 		}
 
 		int revokedCount = refreshTokenMapper.revokeToken(refreshToken.getTokenNum(), LocalDateTime.now());
 		if (0 == revokedCount) {
-			throw new InvalidCredentialsException(REFRESH_FAIL_MESSAGE);
+			return Optional.empty();
 		}
 		
 		String rawRefreshToken = issue(refreshToken.getUserNum(), refreshToken.getFamilyId());
 		String accessToken = jwtTokenProvider.createAccessToken(refreshToken.getUserNum());
-		return new RefreshResult(accessToken, rawRefreshToken);
+		return Optional.of(new RefreshResult(accessToken, rawRefreshToken));
 	}
 
 	// 발급 부품 — 원문 만들기 → 해시 → INSERT → 원문 반환. issueNewFamily(새 familyId) · 로테이션(옛 familyId 복사) 이 부른다

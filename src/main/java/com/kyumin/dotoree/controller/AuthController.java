@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.kyumin.dotoree.dto.RefreshResponseDto;
 import com.kyumin.dotoree.dto.RefreshResult;
+import com.kyumin.dotoree.exception.BusinessException;
+import com.kyumin.dotoree.exception.ErrorCode;
 import com.kyumin.dotoree.security.RefreshCookieProvider;
 import com.kyumin.dotoree.service.RefreshTokenService;
 
@@ -27,7 +29,9 @@ public class AuthController {
 
 	@PostMapping("/refresh")
 	public ResponseEntity<RefreshResponseDto> refresh(@CookieValue(name = "refresh_token", required = false) String rawToken) {
-		RefreshResult refreshResult = refreshTokenService.refresh(rawToken);
+		// 거절(빈 값)이면 401 — 서비스 트랜잭션이 커밋된 뒤라 재사용 탐지의 패밀리 폐기는 남는다 (ADR-062)
+		RefreshResult refreshResult = refreshTokenService.refresh(rawToken)
+				.orElseThrow(() -> new BusinessException(ErrorCode.REFRESH_FAILED));
 		ResponseCookie cookie = refreshCookieProvider.create(refreshResult.getRawRefreshToken());
 		return ResponseEntity.status(HttpStatus.OK).header(HttpHeaders.SET_COOKIE, cookie.toString())
 				.body(new RefreshResponseDto(refreshResult.getAccessToken()));

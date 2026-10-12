@@ -20,39 +20,13 @@ public class GlobalExceptionHandler {
     // 응답 본문은 전부 ProblemDetail(RFC 9457) — {type, title, status, detail, instance}. 사람에게 보여 줄 문구는 detail (ADR-061)
     // ProblemDetail 을 돌려주면 스프링이 그 status 로 응답하고 instance(요청 경로)를 채운다
 
-    // ── 도메인 예외 — 의미별 부모 4개로 받는다 (ADR-041, 2026-09-30). 자식(CategoryNotFound …)은 부모를 상속만 하고
-    //    핸들러를 갖지 않는다 → 새 예외가 생겨도 여기는 안 는다. 자식 클래스명은 유지 — 로그에서 출처 식별 (ADR-035)
+    // ── 도메인 예외 — 전부 BusinessException 하나로 받는다 (ADR-062). 상태 코드·문구는 ErrorCode 한 줄에 있다
+    //    새 에러가 생겨도 ErrorCode 에 한 줄 — 여기는 안 는다
 
-    @ExceptionHandler(NotFoundException.class)
-    public ProblemDetail handleNotFound(NotFoundException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    @ExceptionHandler(BusinessException.class)
+    public ProblemDetail handleBusiness(BusinessException e) {
+        return ProblemDetail.forStatusAndDetail(e.getErrorCode().getStatus(), e.getMessage());
     }
-
-    @ExceptionHandler(ForbiddenException.class)
-    public ProblemDetail handleForbidden(ForbiddenException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
-    }
-
-    @ExceptionHandler(ConflictException.class)
-    public ProblemDetail handleConflict(ConflictException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
-    }
-
-    @ExceptionHandler(BadRequestException.class)
-    public ProblemDetail handleBadRequest(BadRequestException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
-    }
-
-    // 401 은 자식이 하나뿐이라 부모 없이 그대로 (YAGNI)
-    @ExceptionHandler(InvalidCredentialsException.class)
-    public ProblemDetail handleInvalidCredentials(InvalidCredentialsException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
-    }
-
-	@ExceptionHandler(AccountLockedException.class)
-	public ProblemDetail handleAccountLocked(AccountLockedException e) {
-		return ProblemDetail.forStatusAndDetail(HttpStatus.LOCKED, e.getMessage());
-	}
 
     // ── 스프링 예외 — 문구가 각각 달라 하나씩 ─────────────────────────────
 

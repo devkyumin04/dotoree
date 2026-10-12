@@ -99,7 +99,7 @@ public class PersonalTransactionController {
 	 *
 	 *  상태코드 : 200 OK
 	 *    409 CONFLICT 는 여기서 직접 만들지 않는다.
-	 *    서비스가 TransactionConflictException 을 던지고
+	 *    서비스가 BusinessException(TRANSACTION_CONFLICT) 을 던지고
 	 *    GlobalExceptionHandler 가 409 로 변환한다.
 	 * ───────────────────────────────────────────────────────────── */
 	@PutMapping("/{transNum}")
