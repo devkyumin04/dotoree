@@ -46,10 +46,10 @@
 		JOIN personal_categories c 
 		ON t.category_num = c.category_num
 		WHERE t.user_num = #{userNum}
-		AND t.use_yn = 'Y'
+		  AND t.use_yn = 'Y'
 	<![CDATA[
-		AND t.trans_date >= #{startDate}
-		AND t.trans_date < #{endDate}
+		  AND t.trans_date >= #{startDate}
+		  AND t.trans_date < #{endDate}
 	]]>
 		ORDER BY t.trans_date DESC, t.trans_num ASC
 	</select>
@@ -58,7 +58,7 @@
 		SELECT *
 		FROM personal_transactions
 		WHERE trans_num = #{transNum} 
-		AND use_yn = 'Y'
+		  AND use_yn = 'Y'
 	</select>
 
 	<update id="updateTransaction" parameterType="com.kyumin.dotoree.domain.PersonalTransaction">
@@ -70,23 +70,23 @@
 			trans_memo = #{transMemo},
 			version = version + 1
 		WHERE trans_num = #{transNum}
-		AND version = #{version}
-		AND use_yn = 'Y'
+		  AND version = #{version}
+		  AND use_yn = 'Y'
 	</update>
 
 	<update id="deleteTransaction">
 		UPDATE personal_transactions
 		SET use_yn = 'N', version = version + 1
 		WHERE trans_num = #{transNum}
-		AND version = #{version}
-		AND use_yn = 'Y'
+		  AND version = #{version}
+		  AND use_yn = 'Y'
 	</update>
 
 	<update id="moveToDefaultCategory">
 		UPDATE personal_transactions
 		SET category_num = #{newCategoryNum}, version = version +1
 		WHERE category_num = #{oldCategoryNum}
-		AND use_yn = 'Y'
+		  AND use_yn = 'Y'
 	</update>
 
 </mapper>

@@ -28,7 +28,7 @@
 		UPDATE refresh_tokens
 		SET revoked_yn = 'Y', revoked_at = #{revokedAt}
 		WHERE token_num = #{tokenNum}
-		AND revoked_yn = 'N'
+		  AND revoked_yn = 'N'
 	</update>
 
 	<!-- 재사용 탐지·유예 — 같은 family_id 중 살아 있는 줄을 한 번에 폐기 (ADR-055 선택 1·10)
@@ -38,10 +38,11 @@
 		UPDATE refresh_tokens
 		SET revoked_yn = 'Y', revoked_at = #{revokedAt}
 		WHERE family_id = #{familyId}
-		AND revoked_yn = 'N'
+		  AND revoked_yn = 'N'
 	</update>
 
-	<!-- 전 세션 폐기 — 비번 변경·탈퇴. 같은 user_num 의 살아 있는 줄을 일행 가리지 않고 한 번에 (ADR-055 선택 16)
+	<!-- 전 세션 폐기 — 비번 변경·탈퇴. 같은 user_num 의 살아 있는 줄만 일행 가리지 않고 한 번에 (ADR-055 선택 16)
+	     살아 있는 줄만 — 이미 폐기된 줄까지 바꾸면 revoked_at 이 덮어써져 언제 로테이션됐는지 기록이 사라진다
 	     WHERE (user_num, revoked_yn) = V1 인덱스 IDX_TOKEN_USER_REVOKED 그대로 탄다
 	     규칙 — 이 파일의 폐기 UPDATE 셋은 revoked_yn 과 revoked_at 을 항상 같이 채운다. 유예 판정이 getRevokedAt() 을 바로 써서 Y 인데 NULL 이면 NPE → 500
 	            DB CHECK(V4)는 보류(2026-09-29) — 폐기 SQL 이 이 파일 밖에 생기면 다시 본다 -->
@@ -49,7 +50,7 @@
 		UPDATE refresh_tokens
 		SET revoked_yn = 'Y', revoked_at = #{revokedAt}
 		WHERE user_num = #{userNum}
-		AND revoked_yn = 'N'
+		  AND revoked_yn = 'N'
 	</update>
 
 </mapper>

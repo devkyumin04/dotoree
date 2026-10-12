@@ -137,7 +137,7 @@ public class UserService {
 
 		userMapper.resetLoginFail(loginUser.getUserNum());
 
-        userMapper.updateLastLoginAt(loginUser.getUserNum());
+        userMapper.updateLastLoginAt(loginUser.getUserNum(), now);
         String rawRefreshToken = refreshTokenService.issueNewFamily(loginUser.getUserNum());
         
 		String accessToken = jwtTokenProvider.createAccessToken(loginUser.getUserNum());
@@ -207,7 +207,7 @@ public class UserService {
 		checkPassword(userNum, requestDto.getPassword(), "비밀번호가 일치하지 않습니다.");
 
 		// 'A' 인 계정만 바뀐다. 0행 = 이미 탈퇴한 계정의 남은 토큰 → 없는 사용자로 취급
-		int withdrawnRows = userMapper.withdraw(userNum);
+		int withdrawnRows = userMapper.withdraw(userNum, LocalDateTime.now());
 		if (withdrawnRows == 0) {
 			throw new InvalidCredentialsException(USER_NOT_FOUND_MESSAGE);
 		}
@@ -219,7 +219,7 @@ public class UserService {
 	@Transactional
 	public boolean purgeUser(Integer userNum) {
 		// 재확인 + 행 잠금 — 잠금은 이 트랜잭션이 끝날 때까지라 그 사이 로그인(restore)은 기다린다
-		if (userMapper.lockPurgeTarget(userNum, User.WITHDRAW_GRACE_DAYS) == null) {
+		if (userMapper.lockPurgeTarget(userNum, LocalDateTime.now().minusDays(User.WITHDRAW_GRACE_DAYS)) == null) {
 			return false;
 		}
 

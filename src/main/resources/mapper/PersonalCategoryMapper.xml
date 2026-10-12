@@ -58,9 +58,9 @@
 		SELECT *
 		FROM personal_categories
 		WHERE user_num = #{userNum}
-		AND category_type = #{categoryType}
-		AND is_default_yn = 'Y'
-		AND use_yn = 'Y'
+		  AND category_type = #{categoryType}
+		  AND is_default_yn = 'Y'
+		  AND use_yn = 'Y'
 	</select>
 
 </mapper>
