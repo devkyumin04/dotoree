@@ -3,6 +3,7 @@ package com.kyumin.dotoree.service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,7 +59,11 @@ public class UserService {
         newUser.setBookOpenYn("N");
         newUser.setLoginFailCount(0);
         
-        userMapper.insertUser(newUser);
+		try {
+			userMapper.insertUser(newUser);
+		} catch (DuplicateKeyException e) {
+			throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+		}
         
         createDefaultCategory(newUser.getUserNum(), "E");
         createDefaultCategory(newUser.getUserNum(), "I");
