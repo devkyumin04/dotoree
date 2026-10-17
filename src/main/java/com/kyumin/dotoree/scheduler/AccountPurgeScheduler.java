@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.scheduler;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,12 +25,13 @@ public class AccountPurgeScheduler {
 
 	private final UserMapper userMapper;
 	private final UserService userService;
+	private final Clock clock;
 
 	@Scheduled(cron = "${dotoree.purge.cron}", zone = "Asia/Seoul")
 	public void purgeWithdrawnUsers() {
 
 		// 유예 기준은 자바가 계산 — 날수는 User.WITHDRAW_GRACE_DAYS 한 곳 (ADR-060)
-		List<Integer> targets = userMapper.findPurgeTargets(LocalDateTime.now().minusDays(User.WITHDRAW_GRACE_DAYS));
+		List<Integer> targets = userMapper.findPurgeTargets(LocalDateTime.now(clock).minusDays(User.WITHDRAW_GRACE_DAYS));
 
 		if (targets.isEmpty()) {
 			return;

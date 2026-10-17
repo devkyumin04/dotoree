@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
@@ -43,6 +44,7 @@ public class RefreshTokenService {
 
 	// 새 Access(팔찌) 만들기만 빌려 쓴다 — refresh() ⑥
 	private final JwtTokenProvider jwtTokenProvider;
+	private final Clock clock;
 
 	// yml 의 14d. final 이 아니라서 @RequiredArgsConstructor 생성자에 안 들어가고, 스프링이 @Value 로 채운다
 	// 발급 때 EXPIRES_AT 계산에 쓴다. 쿠키 Max-Age 는 RefreshCookieProvider 가 같은 yml 키를 읽는다(원본은 yml 한 줄)
@@ -77,7 +79,7 @@ public class RefreshTokenService {
 			// 폐기된 카드가 다시 옴 — 재사용 탐지 · 유예 (ADR-055 선택 1·10)
 			// 회수(revokeFamily)를 판정보다 먼저: 도둑이든 재시도든 일행의 살아 있는 카드는 치우고, 그 장수(aliveCount)가 있어야 재시도(1 이상)와 부활 시도(0)를 가른다
 			// now 하나를 폐기 시각과 30초 판정에 같이 쓴다(같은 시계)
-			LocalDateTime now = LocalDateTime.now();
+			LocalDateTime now = LocalDateTime.now(clock);
 			int aliveCount = refreshTokenMapper.revokeFamily(refreshToken.getFamilyId(), now);
 			if (aliveCount > 0 && refreshToken.getRevokedAt().plus(GRACE_PERIOD).isAfter(now)) {
 				// 유예 — 같은 일행으로 새 카드 한 장(나머지는 방금 회수해서 살아 있는 건 이것 하나). 옛 카드는 이미 폐기라 revokeToken 없음
@@ -89,11 +91,11 @@ public class RefreshTokenService {
 			// 재사용 탐지 — 정상 반환이라 일행 전체가 폐기된 채로 커밋된다. 주인은 비번으로 다시 로그인
 			return Optional.empty();
 		}
-		if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+		if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now(clock))) {
 			return Optional.empty();
 		}
 
-		int revokedCount = refreshTokenMapper.revokeToken(refreshToken.getTokenNum(), LocalDateTime.now());
+		int revokedCount = refreshTokenMapper.revokeToken(refreshToken.getTokenNum(), LocalDateTime.now(clock));
 		if (0 == revokedCount) {
 			return Optional.empty();
 		}
@@ -114,7 +116,7 @@ public class RefreshTokenService {
 		refreshToken.setFamilyId(familyId);
 		refreshToken.setUserNum(userNum);
 		refreshToken.setTokenHash(tokenHash);
-		refreshToken.setExpiresAt(LocalDateTime.now().plus(refreshTokenExpiration));
+		refreshToken.setExpiresAt(LocalDateTime.now(clock).plus(refreshTokenExpiration));
 		refreshTokenMapper.insertRefreshToken(refreshToken);
 		return rawToken;
 	}
@@ -147,7 +149,7 @@ public class RefreshTokenService {
 			return;
 		}
 		// 카드 상태(폐기·만료)를 묻지 않고 일행 전체 회수. 반환값(바뀐 줄 수)은 버린다 — 0 이어도 성공
-		refreshTokenMapper.revokeFamily(refreshToken.getFamilyId(), LocalDateTime.now());
+		refreshTokenMapper.revokeFamily(refreshToken.getFamilyId(), LocalDateTime.now(clock));
 	}
 
 	// 전 세션 폐기 — 비번 변경·탈퇴 때 그 사용자의 살아 있는 카드를 일행 가리지 않고 전부 (ADR-055 선택 16)
@@ -155,6 +157,6 @@ public class RefreshTokenService {
 	// @Transactional 없음 — 쓰는 문장이 UPDATE 하나뿐(한 문장은 그 자체로 원자적). 비번·상태 UPDATE 와 한 묶음으로 만드는 건 부르는 쪽(UserService)의 트랜잭션이다
 	// 시각은 자바가 정해 넘긴다 (ADR-060)
 	public void revokeAllOfUser(Integer userNum) {
-		refreshTokenMapper.revokeAllOfUser(userNum, LocalDateTime.now());
+		refreshTokenMapper.revokeAllOfUser(userNum, LocalDateTime.now(clock));
 	}
 }

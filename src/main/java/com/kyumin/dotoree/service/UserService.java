@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.service;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
@@ -37,6 +38,7 @@ public class UserService {
     private final PersonalCategoryMapper personalCategoryMapper;
 	private final RefreshTokenService refreshTokenService;
 	private final LoginAttemptService loginAttemptService;
+	private final Clock clock;
 
 	private static final int MAX_FAIL_COUNT = 5;
 	private static final int LOCK_MINUTES = 30;
@@ -99,13 +101,12 @@ public class UserService {
         	throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
-		LocalDateTime now = LocalDateTime.now();
-		if (loginUser.getLockedUntil() != null) {
-			if (loginUser.getLockedUntil().isAfter(now)) {
-				throw new BusinessException(ErrorCode.ACCOUNT_LOCKED, buildLockedMessage(loginUser.getLockedUntil(), now));
-			} else {
-				loginAttemptService.resetLoginFail(loginUser.getUserNum());
-			}
+		LocalDateTime now = LocalDateTime.now(clock);
+
+		if (loginUser.isLockedAt(now)) {
+			throw new BusinessException(ErrorCode.ACCOUNT_LOCKED, buildLockedMessage(loginUser.getLockedUntil(), now));
+		} else if (loginUser.getLockedUntil() != null) {
+			loginAttemptService.resetLoginFail(loginUser.getUserNum());
 		}
 
         boolean isPasswordMatch = passwordEncoder.matches(requestDto.getPassword(), loginUser.getUserPw());
@@ -202,7 +203,7 @@ public class UserService {
 		checkPassword(userNum, requestDto.getPassword(), ErrorCode.PASSWORD_MISMATCH);
 
 		// 'A' 인 계정만 바뀐다. 0행 = 이미 탈퇴한 계정의 남은 토큰 → 없는 사용자로 취급
-		int withdrawnRows = userMapper.withdraw(userNum, LocalDateTime.now());
+		int withdrawnRows = userMapper.withdraw(userNum, LocalDateTime.now(clock));
 		if (withdrawnRows == 0) {
 			throw new BusinessException(ErrorCode.USER_NOT_FOUND);
 		}
@@ -214,7 +215,7 @@ public class UserService {
 	@Transactional
 	public boolean purgeUser(Integer userNum) {
 		// 재확인 + 행 잠금 — 잠금은 이 트랜잭션이 끝날 때까지라 그 사이 로그인(restore)은 기다린다
-		if (userMapper.lockPurgeTarget(userNum, LocalDateTime.now().minusDays(User.WITHDRAW_GRACE_DAYS)) == null) {
+		if (userMapper.lockPurgeTarget(userNum, LocalDateTime.now(clock).minusDays(User.WITHDRAW_GRACE_DAYS)) == null) {
 			return false;
 		}
 

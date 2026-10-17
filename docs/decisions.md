@@ -740,7 +740,7 @@
 - **감수**
   - 매퍼 파라미터가 하나씩 늘고, SQL 만 읽어서는 기준 시각이 안 보인다(부르는 쪽을 봐야 한다)
   - 서버가 여러 대가 되면 서버마다 시계가 조금씩 다르다 — 지금은 한 대(ADR-002). 늘면 NTP 를 전제로 다시 본다
-- **구현** — `UserMapper` 의 `NOW()` 다섯 곳(마지막 로그인 · 탈퇴 · 파기 대상 · 파기 재확인 두 곳)을 `#{lastLoginAt}` · `#{withdrawnAt}` · `#{purgeBefore}` 로. `LocalDateTime.now()` 를 `Clock` 주입으로 바꾸는 건 단위 테스트를 시작할 때
+- **구현** — `UserMapper` 의 `NOW()` 다섯 곳(마지막 로그인 · 탈퇴 · 파기 대상 · 파기 재확인 두 곳)을 `#{lastLoginAt}` · `#{withdrawnAt}` · `#{purgeBefore}` 로. `LocalDateTime.now()` 를 `Clock` 주입으로 바꾸는 건 단위 테스트를 시작할 때 → 2026-10-16 `ClockConfig`(운영은 `Clock.systemDefaultZone()`) 빈 하나를 `UserService` · `RefreshTokenService` · `AccountPurgeScheduler` 가 받아 `LocalDateTime.now(clock)` 10곳. JWT 발급 시각(`JwtTokenProvider` 의 `new Date()`)은 라이브러리 몫이라 그대로
 
 ### ADR-061. API 에러 본문은 ProblemDetail(RFC 9457) (2026-10-12)
 
