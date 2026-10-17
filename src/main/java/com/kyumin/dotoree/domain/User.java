@@ -1,10 +1,10 @@
 package com.kyumin.dotoree.domain;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
+
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -30,4 +30,12 @@ public class User {
     private String signupIp;
     private LocalDateTime userCreatedAt;
     private LocalDateTime userLastLoginAt;
+
+	public boolean isLockedAt(LocalDateTime now) {
+		if (lockedUntil == null) {
+			return false;
+		}
+		return lockedUntil.isAfter(now);
+	}
+
 }
