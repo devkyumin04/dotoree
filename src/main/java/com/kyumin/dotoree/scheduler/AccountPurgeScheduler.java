@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 // 유예(30일)가 끝난 탈퇴 계정을 매일 물리적으로 삭제한다 (ADR-052)
 // 시각은 dotoree.purge.cron — 기본 03:30 KST. 04:00 DB 백업(ADR-050) 전에 돌아서 그날 백업부터 지워진 상태가 담긴다.
-// CI 는 환경변수 DOTOREE_PURGE_CRON 으로 몇 초마다 돌려 qa/test-withdraw.sh 가 파기까지 확인한다
+// 테스트는 기다리지 않고 purgeWithdrawnUsers() 를 직접 부른다(WithdrawIntegrationTest, ADR-064)
 // 서버가 한 대라 중복 실행 방지(ShedLock 등)는 없다 — 서버가 늘면 그때 (ADR-002)
 @Component
 @Slf4j
