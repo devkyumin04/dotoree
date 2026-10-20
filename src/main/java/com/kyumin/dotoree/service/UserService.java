@@ -38,6 +38,7 @@ public class UserService {
     private final PersonalCategoryMapper personalCategoryMapper;
 	private final RefreshTokenService refreshTokenService;
 	private final LoginAttemptService loginAttemptService;
+	private final AccountService accountService;
 	private final Clock clock;
 
 	private static final int MAX_FAIL_COUNT = 5;
@@ -69,6 +70,7 @@ public class UserService {
         
         createDefaultCategory(newUser.getUserNum(), "E");
         createDefaultCategory(newUser.getUserNum(), "I");
+        accountService.createDefaultAccount(newUser.getUserNum());
         
         return new SignupResponseDto(
     	    newUser.getUserNum(),
@@ -219,8 +221,10 @@ public class UserService {
 			return false;
 		}
 
-		// FK 순서 — 가계부(거래 → 소분류 → 대분류) → 계정에 딸린 것(토큰) → 계정. 이유와 "새 테이블이 생기면" 은 UserMapper.xml
+		// FK 순서 — 가계부(거래 → 이체 → 계좌 → 소분류 → 대분류) → 계정에 딸린 것(토큰) → 계정. 이유와 "새 테이블이 생기면" 은 UserMapper.xml
 		userMapper.deleteTransactionsOf(userNum);
+		userMapper.deleteTransfersOf(userNum);
+		userMapper.deleteAccountsOf(userNum);
 		userMapper.deleteChildCategoriesOf(userNum);
 		userMapper.deleteCategoriesOf(userNum);
 		userMapper.deleteRefreshTokensOf(userNum);

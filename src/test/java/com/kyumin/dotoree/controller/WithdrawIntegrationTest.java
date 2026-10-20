@@ -135,6 +135,7 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 		assertThat(count("SELECT COUNT(*) FROM personal_categories WHERE user_num = ?")).isZero();
 		assertThat(count("SELECT COUNT(*) FROM personal_transactions WHERE user_num = ?")).isZero();
 		assertThat(count("SELECT COUNT(*) FROM refresh_tokens WHERE user_num = ?")).isZero();
+		assertThat(count("SELECT COUNT(*) FROM accounts WHERE user_num = ?")).isZero();
 		assertThat(userStatus(otherUserNum)).isEqualTo("W");
 
 		request(HttpMethod.POST, "/api/users/login", null, loginBody(EMAIL))

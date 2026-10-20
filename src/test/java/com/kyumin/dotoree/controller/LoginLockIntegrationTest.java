@@ -197,6 +197,8 @@ class LoginLockIntegrationTest extends IntegrationTestSupport {
 		}
 		Integer target = user.getUserNum();
 		userMapper.deleteTransactionsOf(target);
+		userMapper.deleteTransfersOf(target);
+		userMapper.deleteAccountsOf(target);
 		userMapper.deleteChildCategoriesOf(target);
 		userMapper.deleteCategoriesOf(target);
 		userMapper.deleteRefreshTokensOf(target);
