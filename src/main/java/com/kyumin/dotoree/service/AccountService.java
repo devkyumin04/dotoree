@@ -1,13 +1,21 @@
 package com.kyumin.dotoree.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.kyumin.dotoree.domain.Account;
+import com.kyumin.dotoree.dto.AccountRequestDto;
+import com.kyumin.dotoree.dto.AccountResponseDto;
+import com.kyumin.dotoree.exception.BusinessException;
+import com.kyumin.dotoree.exception.ErrorCode;
 import com.kyumin.dotoree.mapper.AccountMapper;
 
 import lombok.RequiredArgsConstructor;
 
-// 계좌 규칙은 여기 한 곳 — 기본 계좌 만들기 · 찾기 (ADR-065). 계좌 등록 · 닫기 · 잔액 계산은 다음 PR 에서 여기에 붙인다
+// 계좌 규칙은 여기 한 곳 — 기본 계좌 · 등록 · 수정 · 닫기 · 거래가 쓸 계좌 고르기 (ADR-065)
+// 잔액 계산식은 AccountMapper.xml 의 balanceOf 한 곳
 @Service
 @RequiredArgsConstructor
 public class AccountService {
@@ -26,13 +34,134 @@ public class AccountService {
 		return account.getAccountNum();
 	}
 
-	// 거래가 들어갈 기본 계좌 번호. 없으면 만든다 —
-	// 이 버전을 롤백했다 다시 올리면 그 사이 옛 jar 로 가입한 계정엔 기본 계좌가 없다(V4 는 적용 시점의 계정에만 만들었다)
-	public Integer defaultAccountNum(Integer userNum) {
+	// 기본 계좌. 없으면 만든다 —
+	// V4 를 롤백했다 다시 올리면 그 사이 옛 jar 로 가입한 계정엔 기본 계좌가 없다(V4 는 적용 시점의 계정에만 만들었다)
+	public Account defaultAccount(Integer userNum) {
 		Account account = accountMapper.findDefaultAccount(userNum);
 		if (account == null) {
-			return createDefaultAccount(userNum);
+			Integer accountNum = createDefaultAccount(userNum);
+			return accountMapper.findByAccountNum(accountNum);
 		}
-		return account.getAccountNum();
+		return account;
+	}
+
+	public AccountResponseDto createAccount(Integer userNum, AccountRequestDto requestDto) {
+		validateBalanceRule(requestDto);
+		validateUniqueName(userNum, requestDto.getAccountName(), null);
+
+		Account account = new Account();
+		account.setUserNum(userNum);
+		account.setAccountName(requestDto.getAccountName());
+		account.setAccountType(requestDto.getAccountType());
+		account.setOpeningBalance(requestDto.getOpeningBalance());
+		account.setCreditLimit(requestDto.getCreditLimit());
+		account.setIsDefaultYn("N");
+		accountMapper.insertAccount(account);
+
+		// 방금 만든 계좌라 거래 · 이체가 없다 — 잔액 = 시작 잔액
+		return toResponse(account, account.getOpeningBalance());
+	}
+
+	public List<AccountResponseDto> getAccounts(Integer userNum) {
+		return accountMapper.findOpenAccounts(userNum);
+	}
+
+	public AccountResponseDto updateAccount(Integer userNum, Integer accountNum, AccountRequestDto requestDto) {
+		Account account = findOpenOwnedAccount(userNum, accountNum);
+		validateBalanceRule(requestDto);
+		validateUniqueName(userNum, requestDto.getAccountName(), accountNum);
+
+		account.setAccountName(requestDto.getAccountName());
+		account.setAccountType(requestDto.getAccountType());
+		account.setOpeningBalance(requestDto.getOpeningBalance());
+		account.setCreditLimit(requestDto.getCreditLimit());
+		accountMapper.updateAccount(account);
+
+		return toResponse(account, accountMapper.calculateBalance(accountNum));
+	}
+
+	// 닫기 — 잔액 0 일 때만. 거래 · 이체 기록은 이 계좌에 그대로 남는다 (ADR-065 ⑥)
+	@Transactional
+	public void closeAccount(Integer userNum, Integer accountNum) {
+		Account account = findOpenOwnedAccount(userNum, accountNum);
+		if (account.isDefault()) {
+			throw new BusinessException(ErrorCode.DEFAULT_ACCOUNT_NOT_CLOSABLE);
+		}
+		if (accountMapper.calculateBalance(accountNum) != 0) {
+			throw new BusinessException(ErrorCode.ACCOUNT_BALANCE_NOT_ZERO);
+		}
+		accountMapper.closeAccount(accountNum);
+	}
+
+	// 거래가 들어갈 계좌 — 비우면 기본 계좌. 고르면 내 것 · 열린 것만
+	public Account accountForTransaction(Integer userNum, Integer accountNum) {
+		if (accountNum == null) {
+			return defaultAccount(userNum);
+		}
+		Account account = accountMapper.findByAccountNum(accountNum);
+		if (account == null) {
+			throw new BusinessException(ErrorCode.ACCOUNT_NOT_FOUND);
+		}
+		if (!account.getUserNum().equals(userNum)) {
+			throw new BusinessException(ErrorCode.ACCOUNT_ACCESS_DENIED);
+		}
+		if (!account.isOpen()) {
+			throw new BusinessException(ErrorCode.ACCOUNT_CLOSED);
+		}
+		return account;
+	}
+
+	// 거래 수정에서 계좌를 안 바꿀 때 — 지금 붙어 있는 계좌(닫힌 것이어도 기록은 그대로)
+	public Account findAccount(Integer accountNum) {
+		return accountMapper.findByAccountNum(accountNum);
+	}
+
+	// 수정 · 닫기 대상 — 닫힌 계좌는 없는 것으로(404)
+	private Account findOpenOwnedAccount(Integer userNum, Integer accountNum) {
+		Account account = accountMapper.findByAccountNum(accountNum);
+		if (account == null || !account.isOpen()) {
+			throw new BusinessException(ErrorCode.ACCOUNT_NOT_FOUND);
+		}
+		if (!account.getUserNum().equals(userNum)) {
+			throw new BusinessException(ErrorCode.ACCOUNT_ACCESS_DENIED);
+		}
+		return account;
+	}
+
+	// 종류별 시작 잔액 · 한도 규칙 (10/20 확정)
+	// 현금 · 통장 — 0 이상, 한도 없음 / 마이너스통장 · 카드 — −한도까지(한도를 안 적으면 제한 없음)
+	private void validateBalanceRule(AccountRequestDto requestDto) {
+		boolean canBeNegative = Account.canBeNegative(requestDto.getAccountType());
+		Long creditLimit = requestDto.getCreditLimit();
+		long openingBalance = requestDto.getOpeningBalance();
+
+		if (!canBeNegative && creditLimit != null) {
+			throw new BusinessException(ErrorCode.ACCOUNT_CREDIT_LIMIT_NOT_ALLOWED);
+		}
+		if (!canBeNegative && openingBalance < 0) {
+			throw new BusinessException(ErrorCode.ACCOUNT_NEGATIVE_NOT_ALLOWED);
+		}
+		if (canBeNegative && creditLimit != null && openingBalance < -creditLimit) {
+			throw new BusinessException(ErrorCode.ACCOUNT_OVER_CREDIT_LIMIT);
+		}
+	}
+
+	// 열린 계좌끼리 같은 이름 금지 — 화면에서 고를 때 헷갈리지 않게. 닫힌 계좌 이름은 다시 쓸 수 있다
+	private void validateUniqueName(Integer userNum, String accountName, Integer excludeAccountNum) {
+		if (accountMapper.countOpenByName(userNum, accountName, excludeAccountNum) > 0) {
+			throw new BusinessException(ErrorCode.DUPLICATE_ACCOUNT_NAME);
+		}
+	}
+
+	private static AccountResponseDto toResponse(Account account, long balance) {
+		AccountResponseDto responseDto = new AccountResponseDto();
+		responseDto.setAccountNum(account.getAccountNum());
+		responseDto.setAccountName(account.getAccountName());
+		responseDto.setAccountType(account.getAccountType());
+		responseDto.setOpeningBalance(account.getOpeningBalance());
+		responseDto.setCreditLimit(account.getCreditLimit());
+		responseDto.setIsDefault(account.isDefault());
+		responseDto.setBalance(balance);
+		return responseDto;
 	}
 }

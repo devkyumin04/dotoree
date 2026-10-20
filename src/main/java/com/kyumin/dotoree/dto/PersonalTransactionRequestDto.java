@@ -31,4 +31,7 @@ public class PersonalTransactionRequestDto {
 	@Size(max=100, message = "메모는 100자 이하로 입력하시오")
 	private String transMemo;
 	
+	// 비우면 등록은 기본 계좌, 수정은 지금 계좌 그대로 (ADR-065)
+	private Integer accountNum;
+	
 }
