@@ -24,4 +24,4 @@ jwt:
 
 dotoree:
   purge:
-    cron: "0 30 3 * * *" # 탈퇴 계정 파기 — 매일 03:30 KST, 04:00 백업 전 (ADR-052). CI 는 DOTOREE_PURGE_CRON 으로 덮는다
+    cron: "0 30 3 * * *" # 탈퇴 계정 파기 — 매일 03:30 KST, 04:00 백업 전 (ADR-052). 환경변수 DOTOREE_PURGE_CRON 으로 덮을 수 있다
