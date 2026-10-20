@@ -189,7 +189,7 @@ class LoginLockIntegrationTest extends IntegrationTestSupport {
 		return line.substring("refresh_token=".length(), line.indexOf(';'));
 	}
 
-	// 커밋된 계정 지우기 — 파기(UserService.purgeUser)와 같은 FK 순서
+	// 커밋된 계정 지우기 — 파기(UserService.purgeUser)와 같은 FK 순서. 상태('A'·'W')와 상관없이
 	private void deleteAccount(String email) {
 		User user = userMapper.findByEmail(email);
 		if (user == null) {
@@ -200,6 +200,7 @@ class LoginLockIntegrationTest extends IntegrationTestSupport {
 		userMapper.deleteChildCategoriesOf(target);
 		userMapper.deleteCategoriesOf(target);
 		userMapper.deleteRefreshTokensOf(target);
-		userMapper.deleteUser(target);
+		// deleteUser 는 'W'(탈퇴 유예) 계정만 지운다(파기 안전장치) — 활성 계정도 지워야 해서 여기만 직접
+		jdbcTemplate.update("DELETE FROM users WHERE user_num = ?", target);
 	}
 }
