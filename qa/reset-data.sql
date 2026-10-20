@@ -9,6 +9,7 @@
 --       거래 등록과 카테고리 삭제 이관이 전부 깨진다.
 
 -- 1) 거래 전체 삭제 — 카테고리를 참조(FK)하므로 반드시 먼저
+DELETE FROM transfers;
 DELETE FROM personal_transactions;
 ALTER TABLE personal_transactions AUTO_INCREMENT = 1;
 
@@ -17,6 +18,7 @@ ALTER TABLE personal_transactions AUTO_INCREMENT = 1;
 --    MySQL 이 행 삭제 순서를 보장하지 않아 부모가 먼저 지워지는 순간
 --    자식이 아직 그 부모를 참조하기 때문. 소분류 → 대분류 순서로 나눈다.
 --    (카테고리는 2계층 제한이라 두 번이면 충분 — ADR-019)
+DELETE FROM accounts WHERE is_default_yn = 'N';
 DELETE FROM personal_categories WHERE is_default_yn = 'N' AND parent_category_num IS NOT NULL;
 DELETE FROM personal_categories WHERE is_default_yn = 'N';
 

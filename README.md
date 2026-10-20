@@ -41,15 +41,15 @@ flowchart LR
     A --> D[(MySQL)]
     D -. 매일 04:00 덤프 .-> S3B[(S3 백업<br/>30일 보관)]
     M[문의 메일] --> SES[SES 수신 · 서울] --> S3M[(S3 메일함<br/>90일 보관)]
-    G[GitHub Actions] -->|build(JUnit 127개) → qa(스모크) → deploy<br/>OIDC 임시 자격| A
+    G[GitHub Actions] -->|build(JUnit 129개) → qa(스모크) → deploy<br/>OIDC 임시 자격| A
 ```
 
 - 화면과 API 를 한 프로세스가 서빙합니다(별도 프론트 서버 없음). 계산·판단은 서버, 화면은 표시만 합니다.
-- `main` 에 push 하면 **JUnit 단위·통합 테스트 127개**가 일회용 MySQL 에서 돌고, 그 빌드의 jar 를 한 번 띄워 헬스 200 을 확인한 뒤 배포합니다. 하나라도 실패하면 배포되지 않습니다.
+- `main` 에 push 하면 **JUnit 단위·통합 테스트 129개**가 일회용 MySQL 에서 돌고, 그 빌드의 jar 를 한 번 띄워 헬스 200 을 확인한 뒤 배포합니다. 하나라도 실패하면 배포되지 않습니다.
 
 ## 깊게 판 것
 
-설계 결정은 이유·대안·감수한 점을 [ADR](docs/decisions.md) 로 남깁니다(64개).
+설계 결정은 이유·대안·감수한 점을 [ADR](docs/decisions.md) 로 남깁니다(65개).
 
 - **Refresh 토큰을 "도둑과 주인을 구분할 수 없다"는 전제에서 설계** — 로그인 한 번을 패밀리로 묶고, 폐기된 토큰이 다시 오면 패밀리 전체 회수. 응답 유실·탭 두 개 동시 갱신은 30초 유예로 봐주되, 전체 폐기 직후의 부활 시도는 "살아 있는 토큰이 있나"로 막음. 거절(401)을 던져도 회수는 커밋되도록 `noRollbackFor` — 기본값이면 롤백돼 도둑이 새 토큰을 들고 남습니다. 원문은 SecureRandom 32바이트, DB 엔 SHA-256 만, 쿠키는 `HttpOnly · Secure · SameSite=Strict · Path=/api/auth` ([ADR-055](docs/decisions.md))
 - **check-then-act 를 UPDATE 한 문장으로** — 동시 재발급은 `UPDATE … WHERE revoked_yn='N'` 의 영향 행 수로, 유예 판정도 회수 UPDATE 의 반환값으로. 조회 후 갱신 사이에 다른 요청이 끼어들 틈을 없앴습니다

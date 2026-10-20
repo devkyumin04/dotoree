@@ -29,11 +29,11 @@
 	<insert id="insertTransaction" parameterType="com.kyumin.dotoree.domain.PersonalTransaction"
 		useGeneratedKeys="true" keyProperty="transNum">
 		INSERT INTO personal_transactions (
-			user_num, category_num, trans_type,
+			user_num, category_num, account_num, trans_type,
 			trans_amount, trans_date, trans_memo
 		)	
 		VALUES (
-			#{userNum}, #{categoryNum}, #{transType}, 
+			#{userNum}, #{categoryNum}, #{accountNum}, #{transType}, 
 			#{transAmount}, #{transDate}, #{transMemo}
 		)
 	</insert>

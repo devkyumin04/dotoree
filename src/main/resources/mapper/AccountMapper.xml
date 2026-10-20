@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kyumin.dotoree.mapper.AccountMapper">
+
+	<insert id="insertAccount" parameterType="com.kyumin.dotoree.domain.Account"
+		useGeneratedKeys="true" keyProperty="accountNum">
+		INSERT INTO accounts (
+			user_num, account_name, account_type,
+			opening_balance, is_default_yn
+		)
+		VALUES (
+			#{userNum}, #{accountName}, #{accountType},
+			#{openingBalance}, #{isDefaultYn}
+		)
+	</insert>
+
+	<select id="findDefaultAccount" resultType="com.kyumin.dotoree.domain.Account">
+		SELECT *
+		FROM accounts
+		WHERE user_num = #{userNum}
+		  AND is_default_yn = 'Y'
+		  AND use_yn = 'Y'
+	</select>
+
+</mapper>

@@ -52,6 +52,10 @@ public interface UserMapper {
 	// 물리적 삭제 — 부르는 순서 = FK 순서 (UserService.purgeUser). 이유와 "새 테이블이 생기면" 은 UserMapper.xml
 	void deleteTransactionsOf(@Param("userNum") Integer userNum);
 
+	void deleteTransfersOf(@Param("userNum") Integer userNum);
+
+	void deleteAccountsOf(@Param("userNum") Integer userNum);
+
 	void deleteChildCategoriesOf(@Param("userNum") Integer userNum);
 
 	void deleteCategoriesOf(@Param("userNum") Integer userNum);

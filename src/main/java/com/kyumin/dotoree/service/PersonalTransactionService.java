@@ -34,6 +34,8 @@ public class PersonalTransactionService {
 	 */
 
 	private final PersonalTransactionMapper personalTransactionMapper;
+
+	private final AccountService accountService;
 	private final PersonalCategoryMapper personalCategoryMapper;
 
 	public List<PersonalTransactionResponseDto> getTransactions(Integer userNum, int year, int month) {
@@ -96,6 +98,8 @@ public class PersonalTransactionService {
 		transaction.setTransDate(requestDto.getTransDate());
 		transaction.setTransMemo(requestDto.getTransMemo());
 		transaction.setUserNum(userNum);
+		// 계좌는 아직 고르지 않는다 — 기본 '현금' 계좌로. 거래 입력에서 계좌 고르기는 다음 PR (ADR-065)
+		transaction.setAccountNum(accountService.defaultAccountNum(userNum));
 		transaction.setTransType(category.getCategoryType());
 		transaction.setVersion(0);
 		
