@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +31,10 @@ import com.jayway.jsonpath.JsonPath;
 public abstract class IntegrationTestSupport {
 
 	protected static final String PASSWORD = "Qarace12!";
+
+	// 거래 날짜는 지난 날 하나로 고정 — 오늘로 하면 월말·월초에 조회 달이 어긋난다. 미래는 @PastOrPresent 로 막힌다
+	protected static final String TRANS_DATE = "2026-10-01";
+	protected static final String TRANS_MONTH_QUERY = "?year=2026&month=10";
 
 	@Autowired
 	private WebApplicationContext context;
@@ -72,5 +78,49 @@ public abstract class IntegrationTestSupport {
 	protected static <T> T read(ResultActions result, String jsonPath) throws Exception {
 		String body = result.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 		return JsonPath.read(body, jsonPath);
+	}
+
+	// ── 카테고리 · 거래 부품 — 여러 묶음이 같이 쓴다 ──────────────
+
+	protected static String categoryBody(String name, String type, Integer parentCategoryNum) {
+		String parent = parentCategoryNum == null ? "" : ",\"parentCategoryNum\":" + parentCategoryNum;
+		return "{\"categoryName\":\"" + name + "\",\"categoryType\":\"" + type + "\"" + parent + "}";
+	}
+
+	protected Integer createCategory(String token, String name, String type, Integer parentCategoryNum) throws Exception {
+		return read(request(HttpMethod.POST, "/api/categories", token, categoryBody(name, type, parentCategoryNum))
+				.andExpect(status().isCreated()), "$.categoryNum");
+	}
+
+	// 가입 때 생긴 '미분류' 번호 — type 은 "E"(지출) · "I"(수입)
+	protected Integer uncategorized(String token, String type) throws Exception {
+		List<Integer> found = read(request(HttpMethod.GET, "/api/categories", token, null)
+				.andExpect(status().isOk()), "$[?(@.categoryName == '미분류' && @.categoryType == '" + type + "')].categoryNum");
+		return found.get(0);
+	}
+
+	protected static String transactionBody(Integer categoryNum, long amount, String memo) {
+		return """
+				{"categoryNum":%d,"transAmount":%d,"transDate":"%s","transMemo":"%s"}
+				""".formatted(categoryNum, amount, TRANS_DATE, memo);
+	}
+
+	protected Integer createTransaction(String token, Integer categoryNum, long amount, String memo) throws Exception {
+		return read(request(HttpMethod.POST, "/api/transactions", token, transactionBody(categoryNum, amount, memo))
+				.andExpect(status().isCreated()), "$.transNum");
+	}
+
+	// TRANS_DATE 달의 거래 목록 (삭제된 거래는 안 나온다)
+	protected List<Map<String, Object>> monthTransactions(String token) throws Exception {
+		return read(request(HttpMethod.GET, "/api/transactions" + TRANS_MONTH_QUERY, token, null)
+				.andExpect(status().isOk()), "$");
+	}
+
+	// 목록에서 거래 하나 — 없으면 null
+	protected Map<String, Object> findTransaction(String token, Integer transNum) throws Exception {
+		return monthTransactions(token).stream()
+				.filter(row -> transNum.equals(row.get("transNum")))
+				.findFirst()
+				.orElse(null);
 	}
 }
