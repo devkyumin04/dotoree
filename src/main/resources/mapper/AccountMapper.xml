@@ -80,6 +80,13 @@
 		WHERE a.user_num = #{userNum}
 	</select>
 
+	<select id="sumOpeningBalanceOn" resultType="long">
+		SELECT COALESCE(SUM(opening_balance), 0)
+		FROM accounts
+		WHERE user_num = #{userNum}
+		  AND opening_date = #{date}
+	</select>
+
 	<select id="countOpenByName" resultType="int">
 		SELECT COUNT(*)
 		FROM accounts

@@ -84,6 +84,26 @@ class AccountBalanceIntegrationTest extends IntegrationTestSupport {
 	}
 
 	@Test
+	void 그날_시작한_계좌의_시작_잔액은_전날_대비에_안_잡히고_그날_거래만_잡힌다() throws Exception {
+		Integer bank = createAccountOn("국민통장", "B", 500_000, "2026-10-10");
+		add(expense, 20_000, "2026-10-10", bank);
+
+		request(HttpMethod.GET, "/api/accounts/summary?date=2026-10-10", token, null)
+				.andExpect(jsonPath("$.totalBalance").value(480_000))
+				.andExpect(jsonPath("$.previousDayTotalBalance").value(0))
+				.andExpect(jsonPath("$.change").value(-20_000));          // +480,000 이 아니다 — 시작 잔액은 늘어난 돈이 아니다
+	}
+
+	@Test
+	void 지난_날로_시작한_계좌는_원래대로() throws Exception {
+		Integer bank = createAccountOn("국민통장", "B", 500_000, "2026-10-01");
+		add(expense, 20_000, "2026-10-10", bank);
+
+		request(HttpMethod.GET, "/api/accounts/summary?date=2026-10-10", token, null)
+				.andExpect(jsonPath("$.change").value(-20_000));
+	}
+
+	@Test
 	void 시작_날짜_전_날짜의_합계엔_그_계좌가_안_들어간다() throws Exception {
 		createAccountOn("국민통장", "B", 500_000, "2026-10-10");
 

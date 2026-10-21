@@ -222,9 +222,32 @@ function fillAccountOptions(t) {
         select.value = '';
     } else if (t && t.accountNum) {
         document.getElementById('accountNum').value = t.accountNum;
+    } else if (!t) {
+        // 새로 추가할 땐 마지막에 고른 계좌 — 카드를 주로 쓰면 매번 '현금'에서 바꾸지 않게. 닫혔거나 남의 계좌면 기본 그대로
+        const last = loadLastAccount();
+        if (accounts.some(a => a.accountNum === last)) document.getElementById('accountNum').value = last;
     }
     // 이체는 두 계좌가 달라야 하니 받는 계좌의 처음 값은 두 번째 계좌로
     if (accounts.length > 1) document.getElementById('toAccountNum').value = accounts[1].accountNum;
+}
+
+// 마지막에 고른 계좌 — 이 브라우저에만 남는 편의값. 저장소가 막힌 환경(사생활 보호 창 등)에선 조용히 기본 계좌로
+const LAST_ACCOUNT_KEY = 'lastAccountNum';
+
+function loadLastAccount() {
+    try {
+        return Number(localStorage.getItem(LAST_ACCOUNT_KEY)) || null;
+    } catch {
+        return null;
+    }
+}
+
+function saveLastAccount(accountNum) {
+    try {
+        localStorage.setItem(LAST_ACCOUNT_KEY, String(accountNum));
+    } catch {
+        // 못 남겨도 다음에 기본 계좌로 시작할 뿐이다
+    }
 }
 
 // ───── 저장 (추가 / 수정)
@@ -267,6 +290,7 @@ form.addEventListener('submit', async (e) => {
     await withButtonLock(document.getElementById('submitBtn'), async () => {
         try {
             await apiRequest(url, method, body);
+            if (modalType !== 'T' && body.accountNum) saveLastAccount(body.accountNum);
             closeModal();
             await loadTransactions();
         } catch (error) {

@@ -28,6 +28,9 @@ public interface AccountMapper {
 	// 그 사용자의 모든 계좌(닫힌 것 포함) 잔액 합 — 지난 날짜엔 닫힌 계좌에도 돈이 있었다
 	long totalBalance(@Param("userNum") Integer userNum, @Param("untilDate") LocalDate untilDate);
 
+	// 그날 시작한 계좌(닫힌 것 포함)의 시작 잔액 합 — 전날 대비에서 뺀다
+	long sumOpeningBalanceOn(@Param("userNum") Integer userNum, @Param("date") LocalDate date);
+
 	// 열린 계좌 중 같은 이름 수 — 수정 때는 자기 자신(excludeAccountNum)을 빼고 센다
 	int countOpenByName(@Param("userNum") Integer userNum, @Param("accountName") String accountName,
 			@Param("excludeAccountNum") Integer excludeAccountNum);

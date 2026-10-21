@@ -13,5 +13,6 @@ public class BalanceSummaryResponseDto {
 	private LocalDate date;
 	private long totalBalance;
 	private long previousDayTotalBalance;
+	// 그날 시작한 계좌의 시작 잔액은 빼고 센다 — 그래서 totalBalance − previousDayTotalBalance 와 다를 수 있다
 	private long change;
 }
