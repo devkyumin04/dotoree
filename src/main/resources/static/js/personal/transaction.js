@@ -4,6 +4,7 @@ requireLogin();
 // 수정·삭제할 때 번호로 찾아 꺼내 쓴다 (DOM 에는 표시만 맡김)
 let transactions = [];
 let transfers = [];      // 이체 — 수입·지출이 아니라 계좌 사이에서 자리만 옮기는 돈 (ADR-065)
+let adjustments = [];    // 잔액 보정 — 실제 잔액에 맞춘 차이. 통계엔 안 들어간다 (ADR-066)
 let categories = [];
 let accounts = [];       // 열린 계좌 — 기본 '현금'이 맨 앞 (서버 정렬)
 
@@ -32,20 +33,22 @@ const countList = document.getElementById('countList');
 
 // ───── 조회
 // 카테고리·계좌는 다른 탭에서 바뀔 수 있어 목록을 새로 받을 때 같이 받는다(지워진 것으로 저장하면 404).
-// 다섯 요청은 서로의 결과가 필요 없어 동시에 보낸다 — 요청 수는 늘어도 기다리는 시간은 한 번 (ADR-040)
+// 여섯 요청은 서로의 결과가 필요 없어 동시에 보낸다 — 요청 수는 늘어도 기다리는 시간은 한 번 (ADR-040)
 async function loadTransactions() {
-    const [cats, accs, list, moves, stats] = await Promise.all([
+    const [cats, accs, list, moves, fixes, stats] = await Promise.all([
         apiRequest('/api/categories', 'GET'),
         apiRequest('/api/accounts', 'GET'),
         apiRequest(`/api/transactions?year=${year}&month=${month}`, 'GET'),
         apiRequest(`/api/transfers?year=${year}&month=${month}`, 'GET'),
+        apiRequest(`/api/adjustments?year=${year}&month=${month}`, 'GET'),
         apiRequest(`/api/statistics?year=${year}&month=${month}`, 'GET'),
     ]);
-    if (!cats || !accs || !list || !moves || !stats) return;
+    if (!cats || !accs || !list || !moves || !fixes || !stats) return;
     categories = cats;
     accounts = accs;
     transactions = list;
     transfers = moves;
+    adjustments = fixes;
     summary = stats;
     render();
 }
@@ -63,6 +66,7 @@ function render() {
     const rows = [
         ...transactions.map(t => ({ date: t.transDate, order: 0, num: t.transNum, el: () => createItem(t) })),
         ...transfers.map(r => ({ date: r.transferDate, order: 1, num: r.transferNum, el: () => createTransferItem(r) })),
+        ...adjustments.map(j => ({ date: j.adjustmentDate, order: 2, num: j.adjustmentNum, el: () => createAdjustmentItem(j) })),
     ].sort((a, b) => b.date.localeCompare(a.date) || a.order - b.order || a.num - b.num);
 
     listEl.innerHTML = '';
@@ -70,9 +74,11 @@ function render() {
     emptyEl.hidden = rows.length > 0;
 
     // 월 이동·저장·삭제 모두 render() 를 거치므로 여기 한 줄이면 전부 갱신된다
-    countList.textContent = transfers.length > 0
-        ? `${transactions.length}건 · 이체 ${transfers.length}건`
-        : `${transactions.length}건`;
+    const extras = [
+        transfers.length > 0 ? `이체 ${transfers.length}건` : '',
+        adjustments.length > 0 ? `보정 ${adjustments.length}건` : '',
+    ].filter(Boolean);
+    countList.textContent = [`${transactions.length}건`, ...extras].join(' · ');
 }
 
 function createItem(t) {
@@ -105,6 +111,23 @@ function createTransferItem(r) {
         <span class="actions">
             <button data-action="edit" data-kind="transfer" data-id="${r.transferNum}">수정</button>
             <button data-action="delete" data-kind="transfer" data-id="${r.transferNum}">삭제</button>
+        </span>
+    `;
+    return li;
+}
+
+// 잔액 보정 줄 — 회색(이체와 같은 자리). 고치기는 없고 지우기만 — 다시 맞추려면 계좌 화면에서 한 번 더
+function createAdjustmentItem(j) {
+    const li = document.createElement('li');
+    li.className = 'transaction-item transfer-item';
+    const sign = j.adjustmentAmount > 0 ? '+' : '-';
+    li.innerHTML = `
+        <span class="trans-date">${j.adjustmentDate.slice(5)}</span>
+        <span class="trans-category">⚖ 잔액 보정</span>
+        <span class="trans-memo">${escapeHtml(j.accountName)}</span>
+        <span class="trans-amount">${sign}${won(Math.abs(j.adjustmentAmount))}</span>
+        <span class="actions">
+            <button data-action="delete" data-kind="adjustment" data-id="${j.adjustmentNum}">삭제</button>
         </span>
     `;
     return li;
@@ -304,9 +327,14 @@ form.addEventListener('submit', async (e) => {
 async function removeItem(target) {
     if (!confirm('삭제하시겠습니까?')) return;
 
-    const url = target.kind === 'transfer'
-        ? `/api/transfers/${target.num}?version=${transfers.find(x => x.transferNum === target.num).version}`
-        : `/api/transactions/${target.num}?version=${transactions.find(x => x.transNum === target.num).version}`;
+    let url;
+    if (target.kind === 'adjustment') {
+        url = `/api/adjustments/${target.num}`;
+    } else if (target.kind === 'transfer') {
+        url = `/api/transfers/${target.num}?version=${transfers.find(x => x.transferNum === target.num).version}`;
+    } else {
+        url = `/api/transactions/${target.num}?version=${transactions.find(x => x.transNum === target.num).version}`;
+    }
     try {
         await apiRequest(url, 'DELETE');
         await loadTransactions();

@@ -10,6 +10,7 @@
 
 -- 1) 거래 전체 삭제 — 카테고리를 참조(FK)하므로 반드시 먼저
 DELETE FROM transfers;
+DELETE FROM balance_adjustments;
 DELETE FROM personal_transactions;
 ALTER TABLE personal_transactions AUTO_INCREMENT = 1;
 

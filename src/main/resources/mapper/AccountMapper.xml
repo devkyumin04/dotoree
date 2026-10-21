@@ -4,7 +4,7 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.kyumin.dotoree.mapper.AccountMapper">
 
-	<!-- 잔액 계산은 여기 한 곳 (ADR-065) — 시작 잔액 + 수입 − 지출 + 받은 이체 − 보낸 이체. 삭제된(use_yn='N') 거래 · 이체는 빼고
+	<!-- 잔액 계산은 여기 한 곳 (ADR-065) — 시작 잔액 + 수입 − 지출 + 받은 이체 − 보낸 이체 + 잔액 보정(ADR-066). 삭제된(use_yn='N') 거래 · 이체 · 보정은 빼고
 	     · 시작 날짜(opening_date) 이후 거래 · 이체만 — 시작 잔액에 이미 들어 있는 지난 돈을 두 번 세지 않는다. NULL(기본 계좌) = 처음부터
 	     · untilDate 가 있으면 "그날 기준" — 그날까지의 거래만, 시작 날짜가 그날보다 뒤면 시작 잔액도 아직 없다
 	     a = accounts 별칭. 부르는 문장은 전부 untilDate 파라미터를 가진다(null = 지금)
@@ -28,7 +28,12 @@
 			            FROM transfers r
 			            WHERE r.from_account_num = a.account_num AND r.use_yn = 'Y'
 			              AND (a.opening_date IS NULL OR r.transfer_date &gt;= a.opening_date)
-			            <if test="untilDate != null">  AND r.transfer_date &lt;= #{untilDate}</if>), 0))
+			            <if test="untilDate != null">  AND r.transfer_date &lt;= #{untilDate}</if>), 0)
+			+ COALESCE((SELECT SUM(j.adjustment_amount)
+			            FROM balance_adjustments j
+			            WHERE j.account_num = a.account_num AND j.use_yn = 'Y'
+			              AND (a.opening_date IS NULL OR j.adjustment_date &gt;= a.opening_date)
+			            <if test="untilDate != null">  AND j.adjustment_date &lt;= #{untilDate}</if>), 0))
 	</sql>
 
 	<insert id="insertAccount" parameterType="com.kyumin.dotoree.domain.Account"

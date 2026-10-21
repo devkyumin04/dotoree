@@ -49,6 +49,7 @@ function createItem(a) {
         ${limit}
         <span class="account-balance ${balanceClass}">${won(a.balance)}</span>
         <span class="actions">
+            <button data-action="adjust" data-id="${a.accountNum}">잔액 맞추기</button>
             <button data-action="edit" data-id="${a.accountNum}">수정</button>
             ${a.isDefault ? '' : `<button data-action="close" data-id="${a.accountNum}">닫기</button>`}
         </span>
@@ -65,6 +66,7 @@ listEl.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const id = Number(btn.dataset.id);
+    if (btn.dataset.action === 'adjust') openAdjustModal(id);
     if (btn.dataset.action === 'edit') openModal(id);
     if (btn.dataset.action === 'close') closeAccount(id);
 });
@@ -142,11 +144,55 @@ form.addEventListener('submit', async (e) => {
     });
 });
 
+// ───── 잔액 맞추기 (ADR-066) — 차이 계산은 서버. 화면은 실제 잔액만 보낸다
+const adjustModal = document.getElementById('adjustModal');
+const adjustForm = document.getElementById('adjustForm');
+const adjustMessage = document.getElementById('adjustMessage');
+let adjustingNum = null;
+
+document.getElementById('adjustCancelBtn').addEventListener('click', closeAdjustModal);
+
+function openAdjustModal(id) {
+    const a = accounts.find(x => x.accountNum === id);
+    adjustForm.reset();
+    adjustMessage.textContent = '';
+    adjustingNum = id;
+    document.getElementById('adjustHint').textContent = `'${a.accountName}' 앱 잔액 ${won(a.balance)}원`;
+    document.getElementById('actualBalance').value = a.balance;
+    adjustModal.hidden = false;
+}
+
+function closeAdjustModal() {
+    adjustModal.hidden = true;
+    adjustingNum = null;
+}
+
+adjustForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = { actualBalance: Number(document.getElementById('actualBalance').value) };
+    await withButtonLock(document.getElementById('adjustSubmitBtn'), async () => {
+        try {
+            await apiRequest(`/api/accounts/${adjustingNum}/adjustments`, 'POST', body);
+            closeAdjustModal();
+            await loadAccounts();
+        } catch (error) {
+            adjustMessage.textContent = error.message;
+        }
+    });
+});
+
 // 닫기 — 잔액 0 일 때만(서버가 판단). 기록은 그 계좌에 그대로 남는다
+// 잔액이 남아 있으면 "0원으로 맞추고 닫기"를 한 번에 — 잔액 맞추기(실제 잔액 0) 뒤 닫기
 async function closeAccount(id) {
     const a = accounts.find(x => x.accountNum === id);
-    if (!confirm(`'${a.accountName}' 계좌를 닫을까요? 지난 거래는 그대로 남아요.`)) return;
+    const question = a.balance === 0
+        ? `'${a.accountName}' 계좌를 닫을까요? 지난 거래는 그대로 남아요.`
+        : `'${a.accountName}'에 ${won(a.balance)}원이 남아 있어요. 0원으로 맞추고 닫을까요? 지난 거래는 그대로 남아요.`;
+    if (!confirm(question)) return;
     try {
+        if (a.balance !== 0) {
+            await apiRequest(`/api/accounts/${id}/adjustments`, 'POST', { actualBalance: 0 });
+        }
         await apiRequest(`/api/accounts/${id}`, 'DELETE');
         await loadAccounts();
     } catch (error) {

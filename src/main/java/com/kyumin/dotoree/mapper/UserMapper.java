@@ -54,6 +54,8 @@ public interface UserMapper {
 
 	void deleteTransfersOf(@Param("userNum") Integer userNum);
 
+	void deleteAdjustmentsOf(@Param("userNum") Integer userNum);
+
 	void deleteAccountsOf(@Param("userNum") Integer userNum);
 
 	void deleteChildCategoriesOf(@Param("userNum") Integer userNum);
