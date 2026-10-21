@@ -9,6 +9,8 @@
 --       거래 등록과 카테고리 삭제 이관이 전부 깨진다.
 
 -- 1) 거래 전체 삭제 — 카테고리를 참조(FK)하므로 반드시 먼저
+DELETE FROM recurring_occurrences;
+DELETE FROM recurring_rules;
 DELETE FROM transfers;
 DELETE FROM balance_adjustments;
 DELETE FROM personal_transactions;

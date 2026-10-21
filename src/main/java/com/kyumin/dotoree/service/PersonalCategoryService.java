@@ -17,6 +17,7 @@ import com.kyumin.dotoree.exception.BusinessException;
 import com.kyumin.dotoree.exception.ErrorCode;
 import com.kyumin.dotoree.mapper.PersonalCategoryMapper;
 import com.kyumin.dotoree.mapper.PersonalTransactionMapper;
+import com.kyumin.dotoree.mapper.RecurringMapper;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +25,7 @@ public class PersonalCategoryService {
 
     private final PersonalCategoryMapper personalCategoryMapper;
     private final PersonalTransactionMapper personalTransactionMapper;
+    private final RecurringMapper recurringMapper;
 
     public CategoryResponseDto createCategory(Integer userNum, CategoryRequestDto requestDto) {
     	
@@ -151,6 +153,8 @@ public class PersonalCategoryService {
         //미분류 카테고리는 singup에서 항상 생성, sql로 직접 넣은 유저만 null
         PersonalCategory defaultCategory = personalCategoryMapper.findDefaultCategory(userNum, category.getCategoryType());
         personalTransactionMapper.moveToDefaultCategory(categoryNum, defaultCategory.getCategoryNum());
+        // 반복 규칙도 거래처럼 '미분류'로 — 지운 카테고리로 예정을 확인하면 404 가 난다 (ADR-067)
+        recurringMapper.moveToDefaultCategory(categoryNum, defaultCategory.getCategoryNum());
         
         // Mapper로 delete 호출
         personalCategoryMapper.deleteCategory(categoryNum);

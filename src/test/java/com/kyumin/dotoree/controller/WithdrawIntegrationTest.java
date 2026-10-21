@@ -47,6 +47,13 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 		// 잔액 보정도 계좌를 참조한다 — 계좌보다 먼저 지워야 파기가 안 깨진다 (ADR-066)
 		request(HttpMethod.POST, "/api/accounts/" + defaultAccount(token) + "/adjustments", token, "{\"actualBalance\":5000}")
 				.andExpect(status().isCreated());
+		// 반복 규칙 + 처리한 예정 — 거래 · 카테고리 · 계좌를 참조해 맨 먼저 지워야 한다 (ADR-067)
+		Integer rule = read(request(HttpMethod.POST, "/api/recurring", token,
+				"{\"categoryNum\":" + child + ",\"ruleAmount\":3000,\"repeatType\":\"M\",\"repeatDay\":1}")
+				.andExpect(status().isCreated()), "$.ruleNum");
+		jdbcTemplate.update("UPDATE recurring_rules SET start_date = '2026-09-01' WHERE rule_num = ?", rule);
+		request(HttpMethod.POST, "/api/recurring/" + rule + "/confirm", token, "{\"scheduledDate\":\"2026-09-01\"}")
+				.andExpect(status().isCreated());
 	}
 
 	// ── 1. 입구 ──────────────────────────────
@@ -138,6 +145,8 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 		assertThat(count("SELECT COUNT(*) FROM personal_categories WHERE user_num = ?")).isZero();
 		assertThat(count("SELECT COUNT(*) FROM personal_transactions WHERE user_num = ?")).isZero();
 		assertThat(count("SELECT COUNT(*) FROM refresh_tokens WHERE user_num = ?")).isZero();
+		assertThat(count("SELECT COUNT(*) FROM recurring_occurrences WHERE user_num = ?")).isZero();
+		assertThat(count("SELECT COUNT(*) FROM recurring_rules WHERE user_num = ?")).isZero();
 		assertThat(count("SELECT COUNT(*) FROM balance_adjustments WHERE user_num = ?")).isZero();
 		assertThat(count("SELECT COUNT(*) FROM accounts WHERE user_num = ?")).isZero();
 		assertThat(userStatus(otherUserNum)).isEqualTo("W");

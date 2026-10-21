@@ -32,6 +32,13 @@ public enum ErrorCode {
 	ACCOUNT_BALANCE_NOT_ZERO(HttpStatus.BAD_REQUEST, "잔액이 0 일 때만 닫을 수 있습니다. 잔액 맞추기나 이체로 0 으로 맞춘 뒤 닫아 주세요."),
 	ACCOUNT_CLOSED(HttpStatus.BAD_REQUEST, "닫힌 계좌에는 거래를 넣을 수 없습니다."),
 	TRANSFER_SAME_ACCOUNT(HttpStatus.BAD_REQUEST, "보내는 계좌와 받는 계좌가 같습니다."),
+	ACCOUNT_HAS_RECURRING(HttpStatus.BAD_REQUEST, "이 계좌를 쓰는 반복이 있습니다. 반복도 같이 끝낼지 골라 주세요."),
+	// 반복 예정 (ADR-067)
+	RECURRING_TARGET_INVALID(HttpStatus.BAD_REQUEST, "거래(카테고리) 또는 이체(보내는 · 받는 계좌) 중 하나를 고르시오."),
+	RECURRING_MONTH_REQUIRED(HttpStatus.BAD_REQUEST, "매년 반복은 달을 골라야 합니다."),
+	RECURRING_START_IN_PAST(HttpStatus.BAD_REQUEST, "시작 날짜는 오늘 이후여야 합니다. 지난 건 거래로 직접 적어 주세요."),
+	RECURRING_END_BEFORE_START(HttpStatus.BAD_REQUEST, "끝 날짜가 시작 날짜보다 앞입니다."),
+	OCCURRENCE_NOT_SCHEDULED(HttpStatus.BAD_REQUEST, "그날은 이 반복의 예정일이 아닙니다."),
 
 	// ── 401 — 누구인지 확인이 안 된다
 	// 없음·불일치·파기됨을 한 문구로 — 어느 쪽인지 알려 주지 않는다 (계정 존재 비노출은 가입 409 때문에 이미 반쪽이지만, 굳이 더 열지 않는다)
@@ -50,6 +57,7 @@ public enum ErrorCode {
 	DEFAULT_ACCOUNT_NOT_CLOSABLE(HttpStatus.FORBIDDEN, "기본 계좌는 닫을 수 없습니다."),
 	TRANSFER_ACCESS_DENIED(HttpStatus.FORBIDDEN, "본인의 이체내역만 사용할 수 있습니다."),
 	ADJUSTMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "본인의 잔액 보정만 사용할 수 있습니다."),
+	RECURRING_ACCESS_DENIED(HttpStatus.FORBIDDEN, "본인의 반복만 사용할 수 있습니다."),
 
 	// ── 404 — 찾는 것이 없다
 	CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 카테고리입니다."),
@@ -57,11 +65,13 @@ public enum ErrorCode {
 	ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 계좌입니다."),
 	TRANSFER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 이체내역입니다."),
 	ADJUSTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 잔액 보정입니다."),
+	RECURRING_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 반복입니다."),
 
 	// ── 409 — 지금 상태와 부딪힌다
 	DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
 	DUPLICATE_ACCOUNT_NAME(HttpStatus.CONFLICT, "같은 이름의 계좌가 이미 있습니다."),
 	TRANSFER_CONFLICT(HttpStatus.CONFLICT, "다른 곳에서 이미 변경된 이체입니다. 새로고침 후 다시 시도해주세요."),
+	OCCURRENCE_ALREADY_HANDLED(HttpStatus.CONFLICT, "이미 확인했거나 건너뛴 예정입니다. 새로고침 후 다시 확인해 주세요."),
 	TRANSACTION_CONFLICT(HttpStatus.CONFLICT, "다른 곳에서 이미 변경된 내역입니다. 새로고침 후 다시 시도해주세요."),
 
 	// ── 423 — 잠겼다. 실제 문구는 남은 분을 넣어 throw 하는 쪽이 넘긴다(UserService.buildLockedMessage). 아래는 기본값

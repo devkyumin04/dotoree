@@ -11,6 +11,8 @@
 
 SET FOREIGN_KEY_CHECKS = 0;
 
+TRUNCATE TABLE recurring_occurrences;
+TRUNCATE TABLE recurring_rules;
 TRUNCATE TABLE transfers;
 TRUNCATE TABLE balance_adjustments;
 TRUNCATE TABLE personal_transactions;
