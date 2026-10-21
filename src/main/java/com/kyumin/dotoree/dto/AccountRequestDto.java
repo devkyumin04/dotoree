@@ -1,9 +1,12 @@
 package com.kyumin.dotoree.dto;
 
+import java.time.LocalDate;
+
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -29,6 +32,10 @@ public class AccountRequestDto {
 	@Max(value = 1000000000000L, message = "시작 잔액은 1조원 이하로 입력하시오")
 	@Min(value = -1000000000000L, message = "시작 잔액은 -1조원 이상으로 입력하시오")
 	private Long openingBalance;
+
+	// 시작 잔액이 며칠 기준인지 — 비우면 등록은 오늘, 수정은 지금 값 그대로 (ADR-065 ⑦)
+	@PastOrPresent(message = "시작 날짜는 미래로 정할 수 없습니다")
+	private LocalDate openingDate;
 
 	@Positive(message = "한도는 1원 이상으로 입력하시오")
 	@Max(value = 1000000000000L, message = "한도는 1조원 이하로 입력하시오")

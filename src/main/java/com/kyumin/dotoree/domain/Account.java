@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.domain;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import lombok.Getter;
@@ -22,6 +23,7 @@ public class Account {
 	private String accountType;
 	private Long openingBalance;
 	private Long creditLimit;
+	private LocalDate openingDate;
 	private String isDefaultYn;
 	private String useYn;
 	private LocalDateTime createdAt;

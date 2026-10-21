@@ -126,9 +126,13 @@ public abstract class IntegrationTestSupport {
 
 	// ── 계좌 부품 (ADR-065) ─────────────────────────
 
+	// 계좌의 시작 날짜 — TRANS_DATE 보다 앞으로 고정해, 테스트가 적는 거래가 잔액에 다 들어가게 (시작 날짜 전 거래는 빠진다, ADR-065 ⑦)
+	protected static final String OPENING_DATE = "2026-09-01";
+
 	protected static String accountBody(String name, String type, long openingBalance, Long creditLimit) {
 		String limit = creditLimit == null ? "" : ",\"creditLimit\":" + creditLimit;
-		return "{\"accountName\":\"" + name + "\",\"accountType\":\"" + type + "\",\"openingBalance\":" + openingBalance + limit + "}";
+		return "{\"accountName\":\"" + name + "\",\"accountType\":\"" + type + "\",\"openingBalance\":" + openingBalance
+				+ ",\"openingDate\":\"" + OPENING_DATE + "\"" + limit + "}";
 	}
 
 	protected Integer createAccount(String token, String name, String type, long openingBalance) throws Exception {
