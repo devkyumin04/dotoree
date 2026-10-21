@@ -7,10 +7,25 @@ let month = now.getMonth() + 1;
 const monthLabel = document.getElementById('monthLabel');
 
 // ───── 조회
+// 통계(수입·지출) + 순자산(계좌) — 서로 결과가 필요 없어 동시에 (ADR-040). 계산은 전부 서버
 async function loadStatistics() {
-    const data = await apiRequest(`/api/statistics?year=${year}&month=${month}`, 'GET');
-    if (!data) return;
+    const isThisMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+    const [data, worth, monthly, accounts] = await Promise.all([
+        apiRequest(`/api/statistics?year=${year}&month=${month}`, 'GET'),
+        apiRequest(`/api/accounts/summary?date=${netWorthDate(isThisMonth)}`, 'GET'),
+        apiRequest(`/api/accounts/monthly?year=${year}&month=${month}`, 'GET'),
+        isThisMonth ? apiRequest('/api/accounts', 'GET') : Promise.resolve([]),
+    ]);
+    if (!data || !worth || !monthly || !accounts) return;
     render(data);
+    renderNetWorth(worth, accounts, isThisMonth);
+    renderTrend(data.monthlyList, monthly);
+}
+
+// 순자산 기준일 — 이번 달이면 오늘, 지난 달이면 그달 말일 (날짜 고르기는 표시 기준일 뿐, 합계는 서버)
+function netWorthDate(isThisMonth) {
+    const d = isThisMonth ? now : new Date(year, month, 0);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // ───── 그리기 — 계산 없이 표시만 (ADR-038). 합계·비율·잔액 전부 서버 값
@@ -25,7 +40,24 @@ function render(s) {
 
     renderEnvelopes('expenseList', 'expenseEmpty', s.expenseList);
     renderEnvelopes('incomeList', 'incomeEmpty', s.incomeList);
-    renderTrend(s.monthlyList);
+}
+
+function renderNetWorth(worth, accounts, isThisMonth) {
+    document.getElementById('netWorthDate').textContent = isThisMonth ? '오늘' : `${worth.date.slice(5)} 기준`;
+    document.getElementById('netWorth').textContent = won(worth.totalBalance);
+    document.getElementById('netWorthChange').textContent = (worth.change > 0 ? '+' : '') + won(worth.change);
+
+    const listEl = document.getElementById('accountBalances');
+    listEl.innerHTML = '';
+    accounts.forEach(a => {
+        const div = document.createElement('div');
+        div.className = 'stat-item';
+        div.innerHTML = `
+            <span class="stat-name">${escapeHtml(a.accountName)}</span>
+            <span class="stat-amount ${a.balance < 0 ? 'amount-expense' : ''}">${won(a.balance)}</span>
+        `;
+        listEl.appendChild(div);
+    });
 }
 
 function renderEnvelopes(listId, emptyId, list) {
@@ -69,11 +101,13 @@ function createEnvelope(p) {
 }
 
 // 막대 길이만 화면이 정한다 — 6개월 중 가장 큰 금액을 100% 로 (표시 스케일이지 업무 계산이 아님)
-function renderTrend(list) {
+// 월말 순자산은 계좌 API 값을 같은 달(yearMonth)에 붙여 보여 준다 — 두 API 모두 같은 6개월
+function renderTrend(list, monthly) {
     const listEl = document.getElementById('monthlyList');
     listEl.innerHTML = '';
 
     const max = Math.max(1, ...list.map(m => Math.max(m.totalIncome, m.totalExpense)));
+    const worthOf = new Map(monthly.map(m => [m.yearMonth, m.totalBalance]));
 
     list.forEach(m => {
         const div = document.createElement('div');
@@ -84,7 +118,7 @@ function renderTrend(list) {
                 <span class="bar bar-income"></span>
                 <span class="bar bar-expense"></span>
             </span>
-            <span class="trend-balance">${won(m.balance)}</span>
+            <span class="trend-balance">${won(m.balance)}<small class="trend-worth">${won(worthOf.get(m.yearMonth) ?? 0)}</small></span>
         `;
         // 너비는 innerHTML 의 style 속성이 아니라 DOM 으로 준다 — CSP 가 인라인 style 속성을 막는다
         div.querySelector('.bar-income').style.width = `${m.totalIncome / max * 100}%`;
