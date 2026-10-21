@@ -29,5 +29,7 @@ public class ForecastResponseDto {
 		private LocalDate lowestDate;
 		// 모자람 — 현금 · 통장이 0 아래로, 마이너스통장 · 카드가 한도 밖으로 (한도가 없으면 모자람 없음)
 		private boolean shortage;
+		// 처음 모자라는 날 — 미리 채워 둘 날. 가장 낮은 날(lowestDate)보다 앞일 수 있다. 안 모자라면 null
+		private LocalDate shortageDate;
 	}
 }

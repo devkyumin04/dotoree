@@ -46,8 +46,9 @@ function renderForecast(f) {
     f.accounts.forEach(a => {
         const li = document.createElement('li');
         li.className = 'account-item forecast-item';
+        // 처음 모자라는 날 = 미리 채워 둘 날. 가장 낮은 금액은 괄호로
         const warn = a.shortage
-            ? `<small class="shortage">${a.lowestDate.slice(5)} ${won(a.lowestBalance)} 모자람</small>`
+            ? `<small class="shortage">${a.shortageDate.slice(5)}부터 모자람 (최저 ${won(a.lowestBalance)})</small>`
             : '';
         li.innerHTML = `
             <span class="account-name">${escapeHtml(a.accountName)} ${warn}</span>

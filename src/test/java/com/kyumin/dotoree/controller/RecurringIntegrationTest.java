@@ -168,8 +168,30 @@ class RecurringIntegrationTest extends IntegrationTestSupport {
 		assertThat(balance.get(0).longValue()).isEqualTo(-200_000);
 		assertThat(lowestDate).containsExactly("2026-11-01");
 		assertThat(shortage).containsExactly(true);
+		List<String> shortageDate = read(forecast, path + ".shortageDate");
+		assertThat(shortageDate).containsExactly("2026-11-01");
 		List<Boolean> bankShortage = read(forecast, "$.accounts[?(@.accountNum == " + bank + ")].shortage");
 		assertThat(bankShortage).containsExactly(false);
+	}
+
+	@Test
+	void 처음_모자라는_날은_가장_낮은_날보다_앞일_수_있다() throws Exception {
+		// 작은통장 450,000 → 11/25 월세 500,000(−50,000 처음 모자람) → 11/30 카드값 200,000(−250,000 가장 낮음)
+		Integer small = createAccount(token, "작은통장", "B", 450_000);
+		Integer card = createAccount(token, "신한카드", "K", -200_000);
+		Integer rentRule = createRule(monthlyBody(rent, small, 500_000, 25));
+		Integer cardRule = createRule("""
+				{"fromAccountNum":%d,"toAccountNum":%d,"ruleAmount":200000,"repeatType":"M","repeatDay":30}
+				""".formatted(small, card));
+		moveStart(rentRule, "2026-11-01");
+		moveStart(cardRule, "2026-11-01");
+
+		var forecast = request(HttpMethod.GET, RULES + "/forecast?until=2026-11-30", token, null).andExpect(status().isOk());
+		String path = "$.accounts[?(@.accountNum == " + small + ")]";
+		List<String> shortageDate = read(forecast, path + ".shortageDate");
+		List<String> lowestDate = read(forecast, path + ".lowestDate");
+		assertThat(shortageDate).containsExactly("2026-11-25");
+		assertThat(lowestDate).containsExactly("2026-11-30");
 	}
 
 	// ── 계좌 · 카테고리와 엮인 것 ──────────────────

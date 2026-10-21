@@ -160,13 +160,15 @@ function createPendingItem(p) {
     const sign = r.kind === 'I' ? '+' : (r.kind === 'E' ? '-' : '');
     const amountClass = r.kind === 'I' ? 'amount-income' : (r.kind === 'E' ? 'amount-expense' : '');
     const what = r.kind === 'T' ? '↔ 이체' : `${escapeHtml(r.categoryEmoji ?? '')} ${escapeHtml(r.categoryName)}`;
-    const where = r.kind === 'T'
-        ? `${escapeHtml(r.fromAccountName)} → ${escapeHtml(r.toAccountName)}`
-        : `<small class="trans-account">${escapeHtml(r.accountName)}</small>`;
+    // 이체 줄과 같은 모양 — 이체는 "국민통장 → 신한카드 · 메모", 거래는 "메모 + 작은 계좌 이름"
+    const memo = escapeHtml(r.ruleMemo ?? '');
+    const memoAndWhere = r.kind === 'T'
+        ? `${escapeHtml(r.fromAccountName)} → ${escapeHtml(r.toAccountName)}${memo ? ' · ' + memo : ''}`
+        : `${memo}<small class="trans-account">${escapeHtml(r.accountName)}</small>`;
     li.innerHTML = `
         <span class="trans-date">${p.scheduledDate.slice(5)}${p.overdue ? '<span class="overdue">밀림</span>' : ''}</span>
         <span class="trans-category">${what}</span>
-        <span class="trans-memo">${escapeHtml(r.ruleMemo ?? '')}${where}</span>
+        <span class="trans-memo">${memoAndWhere}</span>
         <span class="trans-amount ${amountClass}">${sign}${won(r.ruleAmount)}</span>
         <span class="actions">
             <button data-action="confirm" data-rule="${r.ruleNum}" data-date="${p.scheduledDate}">확인</button>
