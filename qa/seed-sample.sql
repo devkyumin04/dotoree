@@ -12,6 +12,7 @@
 -- 다시 돌리려면 먼저  mysql -u root -p dotoree < qa/reset-data.sql
 
 SET @U = (SELECT user_num FROM users WHERE user_email = 'test@test.com');
+SET @A = (SELECT account_num FROM accounts WHERE user_num = @U AND is_default_yn = 'Y');  -- 가입 때 만든 '현금' — 거래의 계좌 칸은 필수(V7)
 
 -- ── 1) 카테고리 ───────────────────────────────────────────────
 -- 대분류
@@ -67,10 +68,11 @@ FROM (SELECT 0 i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3) a,
 -- 지출 거래: 최근 180일에 걸쳐 3,800건
 -- 카테고리는 소분류 위주로 뽑되, 5% 는 대분류에 직접 단다
 INSERT INTO personal_transactions
-    (user_num, category_num, trans_type, trans_amount, trans_date, trans_memo)
+    (user_num, category_num, account_num, trans_type, trans_amount, trans_date, trans_memo)
 SELECT
     @U,
     c.category_num,
+    @A,
     'E',
     CASE
         WHEN c.category_name = '월세'   THEN 550000
@@ -93,18 +95,20 @@ WHERE s.n < 3800;
 
 -- 수입 거래: 6개월치 월급 + 가끔 용돈
 INSERT INTO personal_transactions
-    (user_num, category_num, trans_type, trans_amount, trans_date, trans_memo)
+    (user_num, category_num, account_num, trans_type, trans_amount, trans_date, trans_memo)
 SELECT @U,
        (SELECT category_num FROM personal_categories WHERE user_num=@U AND category_name='월급'),
+       @A,
        'I', 3200000,
        DATE_SUB(CURDATE(), INTERVAL s.n*30 DAY),
        '월급'
 FROM seq s WHERE s.n < 6;
 
 INSERT INTO personal_transactions
-    (user_num, category_num, trans_type, trans_amount, trans_date, trans_memo)
+    (user_num, category_num, account_num, trans_type, trans_amount, trans_date, trans_memo)
 SELECT @U,
        (SELECT category_num FROM personal_categories WHERE user_num=@U AND category_name='부모님'),
+       @A,
        'I', 100000 + FLOOR(RAND()*200000),
        DATE_SUB(CURDATE(), INTERVAL FLOOR(RAND()*180) DAY),
        '용돈'
@@ -112,8 +116,8 @@ FROM seq s WHERE s.n < 12;
 
 -- 대분류에 직접 단 거래 (소분류뷰에서 '기타'로 보일 것들)
 INSERT INTO personal_transactions
-    (user_num, category_num, trans_type, trans_amount, trans_date, trans_memo)
-SELECT @U, @C_FOOD, 'E', 3000 + FLOOR(RAND()*12000),
+    (user_num, category_num, account_num, trans_type, trans_amount, trans_date, trans_memo)
+SELECT @U, @C_FOOD, @A, 'E', 3000 + FLOOR(RAND()*12000),
        DATE_SUB(CURDATE(), INTERVAL FLOOR(RAND()*180) DAY), '급해서 대분류로'
 FROM seq s WHERE s.n < 60;
 
