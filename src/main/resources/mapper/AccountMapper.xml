@@ -85,11 +85,16 @@
 		WHERE a.user_num = #{userNum}
 	</select>
 
+	<!-- 그날 시작한 계좌의 시작 잔액 + 그 계좌에 그날 한 잔액 보정 — 만든 날의 보정은 "시작 잔액을 고친 것"이라 같이 뺀다 (ADR-066) -->
 	<select id="sumOpeningBalanceOn" resultType="long">
-		SELECT COALESCE(SUM(opening_balance), 0)
-		FROM accounts
-		WHERE user_num = #{userNum}
-		  AND opening_date = #{date}
+		SELECT COALESCE(SUM(a.opening_balance
+				+ COALESCE((SELECT SUM(j.adjustment_amount)
+				            FROM balance_adjustments j
+				            WHERE j.account_num = a.account_num AND j.use_yn = 'Y'
+				              AND j.adjustment_date = #{date}), 0)), 0)
+		FROM accounts a
+		WHERE a.user_num = #{userNum}
+		  AND a.opening_date = #{date}
 	</select>
 
 	<select id="countOpenByName" resultType="int">

@@ -82,6 +82,7 @@ public class AccountService {
 	// 그날 기준 전체 잔액 합계 + 전날 대비. date 를 비우면 오늘
 	// 전날 대비에서 그날 시작한 계좌의 시작 잔액은 뺀다 — 통장(300만원)을 등록한 날 "+3,000,000"이 번 돈처럼 보이지 않게.
 	// 그 계좌의 그날 거래는 그대로 잡힌다. 지난 날로 시작한 계좌는 어제 합계에도 들어 있어 원래 안 튄다
+	// 만든 날 한 잔액 맞추기도 같이 뺀다 — "시작 잔액을 고친 것"이라서(만들고 바로 0원으로 맞추고 닫으면 아무것도 안 적었는데 −가 떴다)
 	public BalanceSummaryResponseDto getSummary(Integer userNum, LocalDate date) {
 		LocalDate target = (date != null) ? date : LocalDate.now(clock);
 		long total = accountMapper.totalBalance(userNum, target);

@@ -95,6 +95,29 @@ class AccountBalanceIntegrationTest extends IntegrationTestSupport {
 	}
 
 	@Test
+	void 만든_날_0원으로_맞추고_닫으면_전날_대비_0() throws Exception {
+		LocalDate today = LocalDate.now();
+		Integer bank = createAccountOn("국민통장", "B", 12_340, today.toString());
+		request(HttpMethod.POST, "/api/accounts/" + bank + "/adjustments", token, "{\"actualBalance\":0}")
+				.andExpect(status().isCreated());
+		request(HttpMethod.DELETE, "/api/accounts/" + bank, token, null).andExpect(status().isNoContent());
+
+		request(HttpMethod.GET, "/api/accounts/summary", token, null)
+				.andExpect(jsonPath("$.change").value(0));          // −12,340 이 아니다 — 아무것도 안 적었다
+	}
+
+	@Test
+	void 어제_만든_계좌의_오늘_보정은_전날_대비에_잡힌다() throws Exception {
+		LocalDate today = LocalDate.now();
+		Integer bank = createAccountOn("국민통장", "B", 1_230_000, today.minusDays(1).toString());
+		request(HttpMethod.POST, "/api/accounts/" + bank + "/adjustments", token, "{\"actualBalance\":1234560}")
+				.andExpect(status().isCreated());
+
+		request(HttpMethod.GET, "/api/accounts/summary", token, null)
+				.andExpect(jsonPath("$.change").value(4_560));     // 실제로 발견한 변화
+	}
+
+	@Test
 	void 지난_날로_시작한_계좌는_원래대로() throws Exception {
 		Integer bank = createAccountOn("국민통장", "B", 500_000, "2026-10-01");
 		add(expense, 20_000, "2026-10-10", bank);
