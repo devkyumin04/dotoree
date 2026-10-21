@@ -183,10 +183,16 @@ public class RecurringService {
 		Map<Integer, Long> running = new LinkedHashMap<>();
 		Map<Integer, Long> lowest = new LinkedHashMap<>();
 		Map<Integer, LocalDate> lowestDate = new LinkedHashMap<>();
+		Map<Integer, LocalDate> shortageDate = new LinkedHashMap<>();
+		Map<Integer, AccountResponseDto> byNum = new LinkedHashMap<>();
 		for (AccountResponseDto a : accounts) {
+			byNum.put(a.getAccountNum(), a);
 			running.put(a.getAccountNum(), a.getBalance());
 			lowest.put(a.getAccountNum(), a.getBalance());
 			lowestDate.put(a.getAccountNum(), today);
+			if (isShortage(a, a.getBalance())) {
+				shortageDate.put(a.getAccountNum(), today);    // 지금 이미 모자람
+			}
 		}
 
 		TreeMap<LocalDate, Map<Integer, Long>> byDay = new TreeMap<>();
@@ -211,6 +217,9 @@ public class RecurringService {
 				lowest.put(accountNum, next);
 				lowestDate.put(accountNum, date);
 			}
+			if (!shortageDate.containsKey(accountNum) && isShortage(byNum.get(accountNum), next)) {
+				shortageDate.put(accountNum, date);
+			}
 		}));
 
 		List<ForecastResponseDto.AccountForecast> result = new ArrayList<>();
@@ -220,7 +229,7 @@ public class RecurringService {
 			long low = lowest.get(a.getAccountNum());
 			result.add(new ForecastResponseDto.AccountForecast(a.getAccountNum(), a.getAccountName(), a.getAccountType(),
 					a.getBalance(), running.get(a.getAccountNum()), low, lowestDate.get(a.getAccountNum()),
-					isShortage(a, low)));
+					isShortage(a, low), shortageDate.get(a.getAccountNum())));
 			currentTotal += a.getBalance();
 			forecastTotal += running.get(a.getAccountNum());
 		}

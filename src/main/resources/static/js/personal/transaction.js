@@ -5,6 +5,7 @@ requireLogin();
 let transactions = [];
 let transfers = [];      // 이체 — 수입·지출이 아니라 계좌 사이에서 자리만 옮기는 돈 (ADR-065)
 let adjustments = [];    // 잔액 보정 — 실제 잔액에 맞춘 차이. 통계엔 안 들어간다 (ADR-066)
+let pending = [];        // 반복 예정 — 아직 기록 안 된 돈. [확인]해야 거래 · 이체가 된다 (ADR-067)
 let categories = [];
 let accounts = [];       // 열린 계좌 — 기본 '현금'이 맨 앞 (서버 정렬)
 
@@ -50,7 +51,21 @@ async function loadTransactions() {
     transfers = moves;
     adjustments = fixes;
     summary = stats;
+    await loadPending();
     render();
+}
+
+// 예정은 이번 달을 볼 때만 — 이번 달 말까지 남은 예정 + 밀린 예정(서버가 같이 준다)
+async function loadPending() {
+    const today = new Date();
+    const isThisMonth = year === today.getFullYear() && month === today.getMonth() + 1;
+    if (!isThisMonth) {
+        pending = [];
+        return;
+    }
+    const lastDay = new Date(year, month, 0).getDate();
+    const until = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    pending = (await apiRequest(`/api/recurring/pending?until=${until}`, 'GET')) ?? [];
 }
 
 // ───── 그리기
@@ -71,6 +86,10 @@ function render() {
 
     listEl.innerHTML = '';
     rows.forEach(row => listEl.appendChild(row.el()));
+
+    pendingList.innerHTML = '';
+    pending.forEach(p => pendingList.appendChild(createPendingItem(p)));
+    pendingSection.hidden = pending.length === 0;
     emptyEl.hidden = rows.length > 0;
 
     // 월 이동·저장·삭제 모두 render() 를 거치므로 여기 한 줄이면 전부 갱신된다
@@ -131,6 +150,95 @@ function createAdjustmentItem(j) {
         </span>
     `;
     return li;
+}
+
+// 예정 줄 — 점선, 밀린 건 "밀림". 버튼은 [확인] · [건너뛰기]
+function createPendingItem(p) {
+    const r = p.rule;
+    const li = document.createElement('li');
+    li.className = r.kind === 'T' ? 'transaction-item pending-item transfer-item' : 'transaction-item pending-item';
+    const sign = r.kind === 'I' ? '+' : (r.kind === 'E' ? '-' : '');
+    const amountClass = r.kind === 'I' ? 'amount-income' : (r.kind === 'E' ? 'amount-expense' : '');
+    const what = r.kind === 'T' ? '↔ 이체' : `${escapeHtml(r.categoryEmoji ?? '')} ${escapeHtml(r.categoryName)}`;
+    // 이체 줄과 같은 모양 — 이체는 "국민통장 → 신한카드 · 메모", 거래는 "메모 + 작은 계좌 이름"
+    const memo = escapeHtml(r.ruleMemo ?? '');
+    const memoAndWhere = r.kind === 'T'
+        ? `${escapeHtml(r.fromAccountName)} → ${escapeHtml(r.toAccountName)}${memo ? ' · ' + memo : ''}`
+        : `${memo}<small class="trans-account">${escapeHtml(r.accountName)}</small>`;
+    li.innerHTML = `
+        <span class="trans-date">${p.scheduledDate.slice(5)}${p.overdue ? '<span class="overdue">밀림</span>' : ''}</span>
+        <span class="trans-category">${what}</span>
+        <span class="trans-memo">${memoAndWhere}</span>
+        <span class="trans-amount ${amountClass}">${sign}${won(r.ruleAmount)}</span>
+        <span class="actions">
+            <button data-action="confirm" data-rule="${r.ruleNum}" data-date="${p.scheduledDate}">확인</button>
+            <button data-action="skip" data-rule="${r.ruleNum}" data-date="${p.scheduledDate}">건너뛰기</button>
+        </span>
+    `;
+    return li;
+}
+
+// ───── 예정 확인 · 건너뛰기 (ADR-067)
+const pendingSection = document.getElementById('pendingSection');
+const pendingList = document.getElementById('pendingList');
+const confirmModal = document.getElementById('confirmModal');
+const confirmForm = document.getElementById('confirmForm');
+const confirmMessage = document.getElementById('confirmMessage');
+let confirming = null;     // { ruleNum, scheduledDate }
+
+pendingList.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const target = { ruleNum: Number(btn.dataset.rule), scheduledDate: btn.dataset.date };
+    if (btn.dataset.action === 'confirm') openConfirmModal(target);
+    if (btn.dataset.action === 'skip') skipPending(target);
+});
+
+document.getElementById('confirmCancelBtn').addEventListener('click', () => { confirmModal.hidden = true; });
+
+// 금액은 규칙 금액, 날짜는 예정일(미래면 오늘 — 미리 낸 것). 둘 다 고칠 수 있다
+function openConfirmModal(target) {
+    const p = pending.find(x => x.rule.ruleNum === target.ruleNum && x.scheduledDate === target.scheduledDate);
+    const r = p.rule;
+    confirming = target;
+    confirmForm.reset();
+    confirmMessage.textContent = '';
+    const name = r.kind === 'T' ? `${r.fromAccountName} → ${r.toAccountName}` : `${r.categoryName} · ${r.accountName}`;
+    document.getElementById('confirmHint').textContent = `${name} · 예정일 ${p.scheduledDate.slice(5)}. 실제와 다르면 고쳐 주세요.`;
+    document.getElementById('confirmAmount').value = r.ruleAmount;
+    const today = todayString();
+    document.getElementById('confirmDate').max = today;
+    document.getElementById('confirmDate').value = p.scheduledDate > today ? today : p.scheduledDate;
+    confirmModal.hidden = false;
+}
+
+confirmForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = {
+        scheduledDate: confirming.scheduledDate,
+        amount: Number(document.getElementById('confirmAmount').value),
+        actualDate: document.getElementById('confirmDate').value,
+    };
+    await withButtonLock(document.getElementById('confirmSubmitBtn'), async () => {
+        try {
+            await apiRequest(`/api/recurring/${confirming.ruleNum}/confirm`, 'POST', body);
+            confirmModal.hidden = true;
+            await loadTransactions();
+        } catch (error) {
+            confirmMessage.textContent = error.message;
+        }
+    });
+});
+
+async function skipPending(target) {
+    if (!confirm('이번 예정만 건너뛸까요? 다음 예정은 그대로 떠요.')) return;
+    try {
+        await apiRequest(`/api/recurring/${target.ruleNum}/skip`, 'POST', { scheduledDate: target.scheduledDate });
+        await loadTransactions();
+    } catch (error) {
+        alert(error.message);
+        await loadTransactions();
+    }
 }
 
 // ───── 월 이동 (12월 → 다음 해 1월)
