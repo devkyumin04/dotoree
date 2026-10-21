@@ -202,7 +202,7 @@ a {
 
 /* 6개월 추이 — CSS 막대. 길이는 6개월 최댓값 기준 */
 .trend-item { display: flex; align-items: center; gap: 10px; padding: 6px 4px; }
-.trend-item .trend-label { width: 60px; opacity: .7; }
+.trend-item .trend-label { width: 64px; opacity: .7; white-space: nowrap; }   /* "2026-05" 가 두 줄로 꺾이지 않게 */
 .trend-item .trend-bars { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .trend-item .bar { display: block; height: 8px; border-radius: 2px; }
 .trend-item .bar-income { background: var(--income); }
@@ -307,3 +307,8 @@ a {
 .account-item .account-balance { width: 120px; text-align: right; font-variant-numeric: tabular-nums; }
 .account-item .actions { display: flex; gap: 4px; }
 .form-hint { font-size: .85rem; opacity: .75; margin: 0; }
+
+/* 통계 6개월 추이 — 이번 달 증감 아래 월말 순자산 */
+.trend-item .trend-worth { display: block; font-size: .8rem; opacity: .6; }
+.home-tips { margin: 8px 0; padding-left: 18px; font-size: .9rem; line-height: 1.6; }
+.home-shot .account-item { padding: 6px 4px; }
