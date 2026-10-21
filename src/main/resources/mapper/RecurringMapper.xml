@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kyumin.dotoree.mapper.RecurringMapper">
+
+	<insert id="insertRule" parameterType="com.kyumin.dotoree.domain.RecurringRule"
+		useGeneratedKeys="true" keyProperty="ruleNum">
+		INSERT INTO recurring_rules (
+			user_num, category_num, account_num, from_account_num, to_account_num,
+			rule_amount, rule_memo, repeat_type, repeat_month, repeat_day, start_date, end_date
+		)
+		VALUES (
+			#{userNum}, #{categoryNum}, #{accountNum}, #{fromAccountNum}, #{toAccountNum},
+			#{ruleAmount}, #{ruleMemo}, #{repeatType}, #{repeatMonth}, #{repeatDay}, #{startDate}, #{endDate}
+		)
+	</insert>
+
+	<select id="findRule" resultType="com.kyumin.dotoree.domain.RecurringRule">
+		SELECT *
+		FROM recurring_rules
+		WHERE rule_num = #{ruleNum}
+		  AND use_yn = 'Y'
+	</select>
+
+	<!-- kind — 이체 규칙이면 T, 거래 규칙이면 카테고리 종류(I/E) -->
+	<select id="findRules" resultType="com.kyumin.dotoree.dto.RecurringRuleResponseDto">
+		SELECT r.rule_num,
+				CASE WHEN r.from_account_num IS NOT NULL THEN 'T' ELSE c.category_type END AS kind,
+				r.category_num, c.category_name, c.category_emoji,
+				r.account_num, a.account_name,
+				r.from_account_num, f.account_name AS from_account_name,
+				r.to_account_num, t.account_name AS to_account_name,
+				r.rule_amount, r.rule_memo, r.repeat_type, r.repeat_month, r.repeat_day, r.start_date, r.end_date
+		FROM recurring_rules r
+		LEFT JOIN personal_categories c ON r.category_num = c.category_num
+		LEFT JOIN accounts a ON r.account_num = a.account_num
+		LEFT JOIN accounts f ON r.from_account_num = f.account_num
+		LEFT JOIN accounts t ON r.to_account_num = t.account_num
+		WHERE r.user_num = #{userNum}
+		  AND r.use_yn = 'Y'
+		ORDER BY r.rule_num ASC
+	</select>
+
+	<update id="updateRule" parameterType="com.kyumin.dotoree.domain.RecurringRule">
+		UPDATE recurring_rules
+		SET category_num = #{categoryNum},
+			account_num = #{accountNum},
+			from_account_num = #{fromAccountNum},
+			to_account_num = #{toAccountNum},
+			rule_amount = #{ruleAmount},
+			rule_memo = #{ruleMemo},
+			repeat_type = #{repeatType},
+			repeat_month = #{repeatMonth},
+			repeat_day = #{repeatDay},
+			start_date = #{startDate},
+			end_date = #{endDate}
+		WHERE rule_num = #{ruleNum}
+		  AND use_yn = 'Y'
+	</update>
+
+	<update id="deleteRule">
+		UPDATE recurring_rules
+		SET use_yn = 'N'
+		WHERE rule_num = #{ruleNum}
+		  AND use_yn = 'Y'
+	</update>
+
+	<select id="countRulesUsingAccount" resultType="int">
+		SELECT COUNT(*)
+		FROM recurring_rules
+		WHERE use_yn = 'Y'
+		  AND (account_num = #{accountNum} OR from_account_num = #{accountNum} OR to_account_num = #{accountNum})
+	</select>
+
+	<update id="deleteRulesUsingAccount">
+		UPDATE recurring_rules
+		SET use_yn = 'N'
+		WHERE use_yn = 'Y'
+		  AND (account_num = #{accountNum} OR from_account_num = #{accountNum} OR to_account_num = #{accountNum})
+	</update>
+
+	<update id="moveToDefaultCategory">
+		UPDATE recurring_rules
+		SET category_num = #{defaultCategoryNum}
+		WHERE category_num = #{categoryNum}
+	</update>
+
+	<insert id="insertOccurrence" parameterType="com.kyumin.dotoree.domain.RecurringOccurrence"
+		useGeneratedKeys="true" keyProperty="occurrenceNum">
+		INSERT INTO recurring_occurrences (
+			rule_num, user_num, scheduled_date, occurrence_status, trans_num, transfer_num
+		)
+		VALUES (
+			#{ruleNum}, #{userNum}, #{scheduledDate}, #{occurrenceStatus}, #{transNum}, #{transferNum}
+		)
+	</insert>
+
+	<select id="findOccurrences" resultType="com.kyumin.dotoree.domain.RecurringOccurrence">
+		SELECT rule_num, scheduled_date, occurrence_status
+		FROM recurring_occurrences
+		WHERE user_num = #{userNum}
+	</select>
+
+</mapper>

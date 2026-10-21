@@ -17,6 +17,7 @@ import com.kyumin.dotoree.dto.MonthlyBalanceDto;
 import com.kyumin.dotoree.exception.BusinessException;
 import com.kyumin.dotoree.exception.ErrorCode;
 import com.kyumin.dotoree.mapper.AccountMapper;
+import com.kyumin.dotoree.mapper.RecurringMapper;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 public class AccountService {
 
 	private final AccountMapper accountMapper;
+	private final RecurringMapper recurringMapper;
 	private final Clock clock;
 
 	// 월말 잔액 추이 — 통계의 수입 · 지출 추이와 같은 6개월
@@ -120,14 +122,21 @@ public class AccountService {
 	}
 
 	// 닫기 — 잔액 0 일 때만. 거래 · 이체 기록은 이 계좌에 그대로 남는다 (ADR-065 ⑥)
+	// 이 계좌를 쓰는 반복이 있으면 묻는다 — endRecurring 이면 같이 끝낸다(남은 예정이 닫힌 계좌로 뜨지 않게, ADR-067)
 	@Transactional
-	public void closeAccount(Integer userNum, Integer accountNum) {
+	public void closeAccount(Integer userNum, Integer accountNum, boolean endRecurring) {
 		Account account = findOpenOwnedAccount(userNum, accountNum);
 		if (account.isDefault()) {
 			throw new BusinessException(ErrorCode.DEFAULT_ACCOUNT_NOT_CLOSABLE);
 		}
 		if (accountMapper.calculateBalance(accountNum, null) != 0) {
 			throw new BusinessException(ErrorCode.ACCOUNT_BALANCE_NOT_ZERO);
+		}
+		if (recurringMapper.countRulesUsingAccount(accountNum) > 0) {
+			if (!endRecurring) {
+				throw new BusinessException(ErrorCode.ACCOUNT_HAS_RECURRING);
+			}
+			recurringMapper.deleteRulesUsingAccount(accountNum);
 		}
 		accountMapper.closeAccount(accountNum);
 	}

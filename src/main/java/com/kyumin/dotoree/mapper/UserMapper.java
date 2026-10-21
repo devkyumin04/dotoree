@@ -50,6 +50,10 @@ public interface UserMapper {
 	Integer lockPurgeTarget(@Param("userNum") Integer userNum, @Param("purgeBefore") LocalDateTime purgeBefore);
 
 	// 물리적 삭제 — 부르는 순서 = FK 순서 (UserService.purgeUser). 이유와 "새 테이블이 생기면" 은 UserMapper.xml
+	void deleteOccurrencesOf(@Param("userNum") Integer userNum);
+
+	void deleteRecurringRulesOf(@Param("userNum") Integer userNum);
+
 	void deleteTransactionsOf(@Param("userNum") Integer userNum);
 
 	void deleteTransfersOf(@Param("userNum") Integer userNum);

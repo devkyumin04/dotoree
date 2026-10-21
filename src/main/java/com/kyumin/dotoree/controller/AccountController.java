@@ -74,11 +74,13 @@ public class AccountController {
 		return ResponseEntity.status(HttpStatus.OK).body(accountService.updateAccount(userNum, accountNum, requestDto));
 	}
 
+	// ?endRecurring=true — 이 계좌를 쓰는 반복도 같이 끝낸다(없으면 무시)
 	@DeleteMapping("/{accountNum}")
 	public ResponseEntity<Void> closeAccount(
 			@AuthenticationPrincipal Integer userNum,
-			@PathVariable Integer accountNum) {
-		accountService.closeAccount(userNum, accountNum);
+			@PathVariable Integer accountNum,
+			@RequestParam(defaultValue = "false") boolean endRecurring) {
+		accountService.closeAccount(userNum, accountNum, endRecurring);
 		return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
 	}
 }
