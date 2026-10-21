@@ -57,6 +57,21 @@
         </div>
     </div>
 
+    <!-- 잔액 맞추기 — 은행 앱에 보이는 실제 잔액을 넣으면 차이만큼 "잔액 보정"이 생긴다. 통계엔 안 잡힌다 (ADR-066) -->
+    <div id="adjustModal" class="modal-overlay" hidden>
+        <div class="modal">
+            <h2>잔액 맞추기</h2>
+            <form id="adjustForm" class="form-container">
+                <p class="form-hint" id="adjustHint"></p>
+                <label>실제 잔액 <input type="number" id="actualBalance" min="-1000000000000" max="1000000000000" required></label>
+                <p class="form-hint">은행·카드 앱에 보이는 지금 잔액을 넣어요. 안 적은 이자나 빼먹은 거래를 하나하나 찾지 않아도 돼요. 카드는 갚을 돈을 마이너스로.</p>
+                <button type="submit" id="adjustSubmitBtn">맞추기</button>
+                <button type="button" id="adjustCancelBtn">취소</button>
+                <p id="adjustMessage" class="result-message"></p>
+            </form>
+        </div>
+    </div>
+
     <script src="/js/util/authGuard.js"></script>
     <script src="/js/util/apiClient.js"></script>
     <script src="/js/util/format.js"></script>

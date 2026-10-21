@@ -221,9 +221,10 @@ public class UserService {
 			return false;
 		}
 
-		// FK 순서 — 가계부(거래 → 이체 → 계좌 → 소분류 → 대분류) → 계정에 딸린 것(토큰) → 계정. 이유와 "새 테이블이 생기면" 은 UserMapper.xml
+		// FK 순서 — 가계부(거래 → 이체 → 보정 → 계좌 → 소분류 → 대분류) → 계정에 딸린 것(토큰) → 계정. 이유와 "새 테이블이 생기면" 은 UserMapper.xml
 		userMapper.deleteTransactionsOf(userNum);
 		userMapper.deleteTransfersOf(userNum);
+		userMapper.deleteAdjustmentsOf(userNum);
 		userMapper.deleteAccountsOf(userNum);
 		userMapper.deleteChildCategoriesOf(userNum);
 		userMapper.deleteCategoriesOf(userNum);

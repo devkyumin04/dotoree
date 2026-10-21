@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kyumin.dotoree.mapper.BalanceAdjustmentMapper">
+
+	<insert id="insertAdjustment" parameterType="com.kyumin.dotoree.domain.BalanceAdjustment"
+		useGeneratedKeys="true" keyProperty="adjustmentNum">
+		INSERT INTO balance_adjustments (
+			user_num, account_num, adjustment_amount, adjustment_date
+		)
+		VALUES (
+			#{userNum}, #{accountNum}, #{adjustmentAmount}, #{adjustmentDate}
+		)
+	</insert>
+
+	<select id="findByAdjustmentNum" resultType="com.kyumin.dotoree.domain.BalanceAdjustment">
+		SELECT *
+		FROM balance_adjustments
+		WHERE adjustment_num = #{adjustmentNum}
+		  AND use_yn = 'Y'
+	</select>
+
+	<select id="findByMonth" resultType="com.kyumin.dotoree.dto.BalanceAdjustmentResponseDto">
+		SELECT j.adjustment_num, j.account_num, a.account_name,
+				j.adjustment_amount, j.adjustment_date
+		FROM balance_adjustments j
+		JOIN accounts a ON j.account_num = a.account_num
+		WHERE j.user_num = #{userNum}
+		  AND j.use_yn = 'Y'
+	<![CDATA[
+		  AND j.adjustment_date >= #{startDate}
+		  AND j.adjustment_date < #{endDate}
+	]]>
+		ORDER BY j.adjustment_date DESC, j.adjustment_num ASC
+	</select>
+
+	<update id="deleteAdjustment">
+		UPDATE balance_adjustments
+		SET use_yn = 'N'
+		WHERE adjustment_num = #{adjustmentNum}
+		  AND use_yn = 'Y'
+	</update>
+
+</mapper>

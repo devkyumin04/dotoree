@@ -44,6 +44,9 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 		Integer parent = createCategory(token, "QA탈퇴대분류", "E", null);
 		Integer child = createCategory(token, "QA탈퇴소분류", "E", parent);
 		createTransaction(token, child, 1000, "탈퇴거래");
+		// 잔액 보정도 계좌를 참조한다 — 계좌보다 먼저 지워야 파기가 안 깨진다 (ADR-066)
+		request(HttpMethod.POST, "/api/accounts/" + defaultAccount(token) + "/adjustments", token, "{\"actualBalance\":5000}")
+				.andExpect(status().isCreated());
 	}
 
 	// ── 1. 입구 ──────────────────────────────
@@ -135,6 +138,7 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 		assertThat(count("SELECT COUNT(*) FROM personal_categories WHERE user_num = ?")).isZero();
 		assertThat(count("SELECT COUNT(*) FROM personal_transactions WHERE user_num = ?")).isZero();
 		assertThat(count("SELECT COUNT(*) FROM refresh_tokens WHERE user_num = ?")).isZero();
+		assertThat(count("SELECT COUNT(*) FROM balance_adjustments WHERE user_num = ?")).isZero();
 		assertThat(count("SELECT COUNT(*) FROM accounts WHERE user_num = ?")).isZero();
 		assertThat(userStatus(otherUserNum)).isEqualTo("W");
 

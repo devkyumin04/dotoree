@@ -12,6 +12,7 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
 TRUNCATE TABLE transfers;
+TRUNCATE TABLE balance_adjustments;
 TRUNCATE TABLE personal_transactions;
 TRUNCATE TABLE accounts;
 TRUNCATE TABLE personal_categories;
