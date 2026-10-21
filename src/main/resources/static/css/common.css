@@ -286,3 +286,24 @@ a {
 .form-section .form-container .form-help { margin-top: 0; }
 .mypage-value { padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); opacity: .8; }
 .mypage-danger { text-align: center; }
+
+/* ── 계좌 · 이체 (ADR-065) ───────────────────────── */
+
+/* 가계부 목록의 이체 줄 — 수입·지출이 아니라 회색 */
+.transfer-item { opacity: .6; }
+.transaction-item .trans-account { margin-left: 6px; opacity: .7; }
+
+.account-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border);
+    list-style: none;
+}
+.account-item .account-name { flex: 1; }
+.account-item .account-name small,
+.account-item > small { opacity: .7; }
+.account-item .account-balance { width: 120px; text-align: right; font-variant-numeric: tabular-nums; }
+.account-item .actions { display: flex; gap: 4px; }
+.form-hint { font-size: .85rem; opacity: .75; margin: 0; }

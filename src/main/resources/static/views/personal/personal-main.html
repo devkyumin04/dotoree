@@ -14,6 +14,7 @@
 
         <nav class="sub-nav">
             <a href="/views/personal/personal-main.html" class="active">가계부</a>
+            <a href="/views/personal/account.html">계좌</a>
             <a href="/views/personal/category.html">카테고리</a>
             <a href="/views/personal/statistics.html">통계</a>
         </nav>
@@ -29,7 +30,7 @@
         <div class="summary">
             <span>수입 <b id="sumIncome" class="amount-income">0</b></span>
             <span>지출 <b id="sumExpense" class="amount-expense">0</b></span>
-            <span>잔액 <b id="sumBalance">0</b></span>
+            <span>이번 달 증감 <small>(수입 − 지출)</small> <b id="sumBalance">0</b></span>
         </div>
 
         <button id="addBtn">+ 추가</button>
@@ -45,16 +46,31 @@
         <div class="modal">
             <h2 id="modalTitle">거래 추가</h2>
             <form id="transactionForm" class="form-container">
-                <!-- 타입은 서버로 보내지 않는다 (카테고리에서 파생 — ADR-008).
-                     여기서는 카테고리 목록을 거르기 위한 화면 전용 토글 -->
+                <!-- 지출/수입 타입은 서버로 보내지 않는다 (카테고리에서 파생 — ADR-008).
+                     지출/수입은 카테고리 목록을 거르는 화면 전용 토글, 이체는 다른 API(/api/transfers) — ADR-065 -->
                 <div class="tabs">
                     <button type="button" class="tab active" data-type="E">지출</button>
                     <button type="button" class="tab" data-type="I">수입</button>
+                    <button type="button" class="tab" data-type="T">이체</button>
                 </div>
 
-                <label>카테고리
-                    <select id="categoryNum" required></select>
-                </label>
+                <div id="transactionFields">
+                    <label>카테고리
+                        <select id="categoryNum"></select>
+                    </label>
+                    <label>계좌
+                        <select id="accountNum"></select>
+                    </label>
+                </div>
+                <!-- 이체 — 계좌 사이에서 돈이 자리만 옮긴다(수입·지출 아님, 월 합계에 안 들어감). 카드값 내기 = 통장 → 카드 -->
+                <div id="transferFields" hidden>
+                    <label>보내는 계좌
+                        <select id="fromAccountNum"></select>
+                    </label>
+                    <label>받는 계좌
+                        <select id="toAccountNum"></select>
+                    </label>
+                </div>
                 <label>금액
                     <input type="number" id="transAmount" min="1" max="1000000000000" required>
                 </label>

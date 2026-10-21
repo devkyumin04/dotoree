@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>계좌</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <script src="/js/util/theme.js"></script>
+</head>
+<body>
+    <div class="page-container">
+        <a href="/views/personal/personal-main.html" class="inline-link">← 개인 가계부</a>
+        <h1>계좌</h1>
+        <nav class="sub-nav">
+            <a href="/views/personal/personal-main.html">가계부</a>
+            <a href="/views/personal/account.html" class="active">계좌</a>
+            <a href="/views/personal/category.html">카테고리</a>
+            <a href="/views/personal/statistics.html">통계</a>
+        </nav>
+
+        <!-- 순자산 = 계좌 잔액의 합(카드·마통의 마이너스도 더한다). 계산은 서버 한 곳 (ADR-065) -->
+        <div class="summary">
+            <span>순자산 <small>(갚을 돈을 뺀 내 돈)</small> <b id="totalBalance">0</b></span>
+            <span>전날 대비 <b id="balanceChange">0</b></span>
+        </div>
+
+        <button id="addBtn">+ 계좌 추가</button>
+        <ul id="accountList"></ul>
+    </div>
+
+    <!-- 모달 -->
+    <div id="accountModal" class="modal-overlay" hidden>
+        <div class="modal">
+            <h2 id="modalTitle">계좌 추가</h2>
+            <form id="accountForm" class="form-container">
+                <label>이름 <input type="text" id="accountName" maxlength="20" required></label>
+                <label>종류
+                    <select id="accountType">
+                        <option value="C">현금</option>
+                        <option value="B">통장</option>
+                        <option value="M">마이너스통장</option>
+                        <option value="K">카드</option>
+                    </select>
+                </label>
+                <!-- 시작 잔액 = 시작 날짜 기준 잔액. 그 날짜 이후 거래만 잔액에 더한다(지난 거래를 채워도 두 번 안 셈) -->
+                <label>시작 잔액 <input type="number" id="openingBalance" min="-1000000000000" max="1000000000000" required></label>
+                <label>시작 날짜 <input type="date" id="openingDate" required></label>
+                <!-- 한도 — 마이너스통장·카드만. 시작 잔액은 −한도까지 -->
+                <label id="creditLimitField" hidden>한도 (비워도 됨)
+                    <input type="number" id="creditLimit" min="1" max="1000000000000">
+                </label>
+                <p class="form-hint" id="typeHint"></p>
+                <button type="submit" id="submitBtn">저장</button>
+                <button type="button" id="cancelBtn">취소</button>
+                <p id="resultMessage" class="result-message"></p>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/util/authGuard.js"></script>
+    <script src="/js/util/apiClient.js"></script>
+    <script src="/js/util/format.js"></script>
+    <script src="/js/util/buttonUtil.js"></script>
+    <script src="/js/personal/account.js"></script>
+</body>
+</html>
