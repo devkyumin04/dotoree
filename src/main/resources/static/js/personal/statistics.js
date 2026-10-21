@@ -20,8 +20,8 @@ function render(s) {
     document.getElementById('totalIncome').textContent = won(s.totalIncome);
     document.getElementById('totalExpense').textContent = won(s.totalExpense);
     document.getElementById('balance').textContent = won(s.balance);
-    // 수입 0 이면 서버가 null (계산 불가 판단은 서버 몫 — ADR-039)
-    document.getElementById('expenseRatio').textContent = percent(s.expenseRatio);
+    // 저축률 — 수입 0 이면 서버가 null (계산 불가 판단은 서버 몫 — ADR-039)
+    document.getElementById('savingsRate').textContent = percent(s.savingsRate);
 
     renderEnvelopes('expenseList', 'expenseEmpty', s.expenseList);
     renderEnvelopes('incomeList', 'incomeEmpty', s.incomeList);

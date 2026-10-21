@@ -224,21 +224,22 @@ public class PersonalStatisticsService {
 		long totalIncome  = incomeList.stream().mapToLong(CategoryStatDto::getAmount).sum();
 		long balance = totalIncome - totalExpense;
 		
-		BigDecimal expenseRatio;
+		// 저축률 = (수입 − 지출) ÷ 수입 × 100 — 번 돈 중 얼마를 남겼나 (10/16 결정, ADR-065 ⑧). 지출이 더 크면 마이너스
+		BigDecimal savingsRate;
 		if (totalIncome == 0) {
 			// 봉투 비율과 달리 여기는 방어가 필요하다.
 			// 봉투는 분모(totalAmount)가 0 이면 줄이 없어 나눗셈에 도달하지 않지만,
-			// 수입 대비 지출은 수입이 0 이어도 지출은 있을 수 있어 나눗셈이 무조건 실행된다.
-			// 0 을 보내면 "지출이 없다" 는 거짓이 되므로 "계산 불가" 를 null 로 내려보낸다.
+			// 저축률은 수입이 0 이어도 지출은 있을 수 있어 나눗셈이 무조건 실행된다.
+			// 0 을 보내면 "하나도 못 남겼다" 는 거짓이 되므로 "계산 불가" 를 null 로 내려보낸다.
 			// 프론트는 null 이면 '-' 로 표시한다 (판단은 서버, 표시는 뷰 - ADR-038).
-		    expenseRatio = null;
+		    savingsRate = null;
 		} else {
-		    expenseRatio = BigDecimal.valueOf(totalExpense)
+		    savingsRate = BigDecimal.valueOf(balance)
 		            .multiply(BigDecimal.valueOf(100))
 		            .divide(BigDecimal.valueOf(totalIncome), 1, RoundingMode.HALF_UP);
 		}
 		
-		return new StatisticsResponseDto(totalIncome, totalExpense, balance, expenseRatio, expenseList, incomeList, monthlyList);
+		return new StatisticsResponseDto(totalIncome, totalExpense, balance, savingsRate, expenseList, incomeList, monthlyList);
 	}
 	
 }

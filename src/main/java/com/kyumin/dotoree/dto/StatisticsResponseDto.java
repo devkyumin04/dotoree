@@ -12,7 +12,7 @@ public class StatisticsResponseDto {
 	private Long totalIncome;
 	private Long totalExpense;
 	private Long balance;
-	private BigDecimal expenseRatio;
+	private BigDecimal savingsRate;   // 저축률 (수입 − 지출) ÷ 수입 · 수입 0 이면 null
 	private List<CategoryStatDto> expenseList;
 	private List<CategoryStatDto> incomeList;
 	private List<MonthlyStatDto> monthlyList;	
