@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
+import com.kyumin.dotoree.domain.Account;
 import com.kyumin.dotoree.domain.PersonalCategory;
 import com.kyumin.dotoree.domain.PersonalTransaction;
 import com.kyumin.dotoree.dto.PersonalTransactionRequestDto;
@@ -98,8 +99,9 @@ public class PersonalTransactionService {
 		transaction.setTransDate(requestDto.getTransDate());
 		transaction.setTransMemo(requestDto.getTransMemo());
 		transaction.setUserNum(userNum);
-		// 계좌는 아직 고르지 않는다 — 기본 '현금' 계좌로. 거래 입력에서 계좌 고르기는 다음 PR (ADR-065)
-		transaction.setAccountNum(accountService.defaultAccountNum(userNum));
+		// 계좌 — 비우면 기본 '현금', 고르면 내 것 · 열린 것만 (ADR-065)
+		Account account = accountService.accountForTransaction(userNum, requestDto.getAccountNum());
+		transaction.setAccountNum(account.getAccountNum());
 		transaction.setTransType(category.getCategoryType());
 		transaction.setVersion(0);
 		
@@ -112,6 +114,8 @@ public class PersonalTransactionService {
 		responseDto.setTransDate(transaction.getTransDate());
 		responseDto.setTransMemo(transaction.getTransMemo());
 		responseDto.setTransType(transaction.getTransType());
+		responseDto.setAccountNum(account.getAccountNum());
+		responseDto.setAccountName(account.getAccountName());
 		responseDto.setCategoryNum(category.getCategoryNum());
 		
 		responseDto.setCategoryName(category.getCategoryName());
@@ -219,7 +223,19 @@ public class PersonalTransactionService {
 			throw new BusinessException(ErrorCode.CATEGORY_ACCESS_DENIED);
 		}
 		
+		// 계좌 — 고르면 내 것 · 열린 것만, 비우면 지금 계좌 그대로(닫힌 계좌의 지난 거래도 고칠 수 있다).
+		// 지금 계좌가 비어 있으면(V4 롤백 사이 옛 jar 가 넣은 거래) 기본 계좌로 채운다
+		Account account;
+		if (requestDto.getAccountNum() != null) {
+			account = accountService.accountForTransaction(userNum, requestDto.getAccountNum());
+		} else if (transaction.getAccountNum() != null) {
+			account = accountService.findAccount(transaction.getAccountNum());
+		} else {
+			account = accountService.defaultAccount(userNum);
+		}
+		
 		transaction.setCategoryNum(requestDto.getCategoryNum());
+		transaction.setAccountNum(account.getAccountNum());
 		transaction.setTransAmount(requestDto.getTransAmount());
 		transaction.setTransDate(requestDto.getTransDate());
 		transaction.setTransMemo(requestDto.getTransMemo());
@@ -239,6 +255,8 @@ public class PersonalTransactionService {
 		responseDto.setTransDate(transaction.getTransDate());
 		responseDto.setTransMemo(transaction.getTransMemo());
 		responseDto.setTransType(transaction.getTransType());
+		responseDto.setAccountNum(account.getAccountNum());
+		responseDto.setAccountName(account.getAccountName());
 		responseDto.setCategoryName(category.getCategoryName());
 		responseDto.setCategoryEmoji(category.getCategoryEmoji());
 		responseDto.setCategoryNum(transaction.getCategoryNum());

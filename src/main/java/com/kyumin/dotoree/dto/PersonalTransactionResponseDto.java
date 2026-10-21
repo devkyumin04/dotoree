@@ -23,4 +23,7 @@ public class PersonalTransactionResponseDto {
 	private String categoryEmoji;
 	
 	private Integer categoryNum;
+	
+	private Integer accountNum;
+	private String accountName;
 }

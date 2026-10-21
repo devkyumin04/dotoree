@@ -41,10 +41,13 @@
 	<select id="findByMonth" resultType="com.kyumin.dotoree.dto.PersonalTransactionResponseDto">
 		SELECT t.trans_num, t.version, t.trans_amount, t.trans_date,
 				t.trans_memo, t.trans_type, t.category_num,
-				c.category_name, c.category_emoji
+				c.category_name, c.category_emoji,
+				t.account_num, a.account_name
 		FROM personal_transactions t
 		JOIN personal_categories c 
 		ON t.category_num = c.category_num
+		LEFT JOIN accounts a
+		ON t.account_num = a.account_num
 		WHERE t.user_num = #{userNum}
 		  AND t.use_yn = 'Y'
 	<![CDATA[
@@ -64,6 +67,7 @@
 	<update id="updateTransaction" parameterType="com.kyumin.dotoree.domain.PersonalTransaction">
 		UPDATE personal_transactions
 		SET category_num = #{categoryNum},
+			account_num = #{accountNum},
 			trans_type = #{transType},
 			trans_amount = #{transAmount},
 			trans_date = #{transDate},
