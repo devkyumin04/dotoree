@@ -25,12 +25,13 @@
             <button type="button" id="nextMonth">▶</button>
         </div>
 
-        <!-- 요약 4개 — 전부 서버 값 그대로 (ADR-038). expenseRatio(수입 대비 지출) null 은 '-' -->
+        <!-- 요약 4개 — 전부 서버 값 그대로 (ADR-038). savingsRate(저축률) null 은 '-'
+             "이번 달 증감"은 기록 기준(수입 − 지출) — 계좌 기준 순자산 변화와 다를 수 있어 부제로 구분 (ADR-065) -->
         <div class="summary stat-summary">
             <span>수입 <b id="totalIncome" class="amount-income">0</b></span>
             <span>지출 <b id="totalExpense" class="amount-expense">0</b></span>
-            <span>잔액 <b id="balance">0</b></span>
-            <span>수입 대비 지출 <b id="expenseRatio">-</b></span>
+            <span>이번 달 증감 <small>(수입 − 지출)</small> <b id="balance">0</b></span>
+            <span>저축률 <b id="savingsRate">-</b></span>
         </div>
 
         <!-- 봉투 목록 — 대분류 펼치면 소분류. 자식 비율은 부모 대비 (ADR-039) -->

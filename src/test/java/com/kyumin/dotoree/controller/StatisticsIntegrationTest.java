@@ -17,17 +17,17 @@ import org.springframework.test.web.servlet.ResultActions;
 import com.kyumin.dotoree.support.IntegrationTestSupport;
 
 // 개인 통계 GET /api/statistics?year=&month= — qa/test-statistics.sh 1~8 번역 (통합 테스트)
-// 요약 4개(수입 · 지출 · 잔액 · 수입 대비 지출) · 봉투(대분류 + 소분류) · 최근 6개월 추이가 한 응답에서 서로 맞는지
+// 요약 4개(수입 · 지출 · 이번 달 증감 · 저축률) · 봉투(대분류 + 소분류) · 최근 6개월 추이가 한 응답에서 서로 맞는지
 //
 // 장면마다 같은 데이터를 다시 넣는다 (테스트끼리 데이터를 나누지 않는다)
 //   2020-06-30 지출 7,000                       → 7월 기준 추이에서 빠지는 시작 경계
-//   2020-07    수입 3,000,000 / 지출 12,000     → 수입 대비 지출 0.4
-//   2020-08    지출 5,000 만                     → 수입 0 → null, incomeList []
-//   2020-10    수입 100,000 만 (+ 남의 지출 9,999) → 지출 0 → 0.0, expenseList []
+//   2020-07    수입 3,000,000 / 지출 12,000     → 저축률 99.6
+//   2020-08    지출 5,000 만                     → 수입 0 → 저축률 null, incomeList []
+//   2020-10    수입 100,000 만 (+ 남의 지출 9,999) → 지출 0 → 저축률 100.0, expenseList []
 //   2020-11    지출 50,000 → 삭제               → 전부 0
-//   2020-12    수입 500 / 지출 1,000            → 200.0, 잔액 -500
+//   2020-12    수입 500 / 지출 1,000            → 저축률 -100.0, 이번 달 증감 -500
 //   2021-01-01 지출 2,000                       → 12월 조회엔 빠지고 3월 조회 추이엔 들어감
-//   2021-03    수입 3,000 / 지출 1,500(대분류 직접) + 500(소분류) → 66.7(HALF_UP), 봉투 2,000 = 75.0 + 25.0
+//   2021-03    수입 3,000 / 지출 1,500(대분류 직접) + 500(소분류) → 저축률 33.3, 봉투 2,000 = 75.0 + 25.0
 class StatisticsIntegrationTest extends IntegrationTestSupport {
 
 	private static final String STATISTICS = "/api/statistics";
@@ -71,7 +71,7 @@ class StatisticsIntegrationTest extends IntegrationTestSupport {
 		ResultActions result = statistics(2020, 12);
 
 		summary(result, 500, 1000, -500)
-				.andExpect(jsonPath("$.expenseRatio").value(200.0))
+				.andExpect(jsonPath("$.savingsRate").value(-100.0))
 				.andExpect(jsonPath("$.expenseList[0].categoryNum").value(expense))
 				.andExpect(jsonPath("$.expenseList[0].amount").value(1000))
 				.andExpect(jsonPath("$.expenseList[0].ratio").value(100.0))
@@ -89,16 +89,16 @@ class StatisticsIntegrationTest extends IntegrationTestSupport {
 	// ── 경계 ─────────────────────────────────
 
 	@Test
-	void 수입이_0이면_수입_대비_지출은_null이고_수입_목록은_빈_배열() throws Exception {
+	void 수입이_0이면_저축률은_null이고_수입_목록은_빈_배열() throws Exception {
 		summary(statistics(2020, 8), 0, 5000, -5000)
-				.andExpect(jsonPath("$.expenseRatio").value(nullValue()))
+				.andExpect(jsonPath("$.savingsRate").value(nullValue()))
 				.andExpect(jsonPath("$.incomeList").isEmpty());
 	}
 
 	@Test
-	void 지출이_0이면_0점0이고_지출_목록은_빈_배열_남의_거래는_안_섞인다() throws Exception {
+	void 지출이_0이면_저축률_100이고_지출_목록은_빈_배열_남의_거래는_안_섞인다() throws Exception {
 		summary(statistics(2020, 10), 100_000, 0, 100_000)
-				.andExpect(jsonPath("$.expenseRatio").value(0.0))
+				.andExpect(jsonPath("$.savingsRate").value(100.0))
 				.andExpect(jsonPath("$.expenseList").isEmpty());
 	}
 
@@ -107,7 +107,7 @@ class StatisticsIntegrationTest extends IntegrationTestSupport {
 		ResultActions result = statistics(1999, 6);
 
 		summary(result, 0, 0, 0)
-				.andExpect(jsonPath("$.expenseRatio").value(nullValue()))
+				.andExpect(jsonPath("$.savingsRate").value(nullValue()))
 				.andExpect(jsonPath("$.expenseList").isEmpty())
 				.andExpect(jsonPath("$.incomeList").isEmpty());
 		assertThat(months(result)).containsExactly("1999-01", "1999-02", "1999-03", "1999-04", "1999-05", "1999-06");
@@ -116,17 +116,17 @@ class StatisticsIntegrationTest extends IntegrationTestSupport {
 	// ── 소수점 · 봉투 ──────────────────────────────
 
 	@Test
-	void 수입_대비_지출은_소수_한_자리_2020년_7월은_0점4() throws Exception {
+	void 저축률은_수입_빼기_지출을_수입으로_나눈_값_2020년_7월은_99점6() throws Exception {
 		summary(statistics(2020, 7), 3_000_000, 12000, 2_988_000)
-				.andExpect(jsonPath("$.expenseRatio").value(0.4));
+				.andExpect(jsonPath("$.savingsRate").value(99.6));
 	}
 
 	@Test
-	void 반올림은_HALF_UP이고_봉투는_대분류_직접_거래와_소분류를_묶는다_2021년_3월() throws Exception {
+	void 봉투는_대분류_직접_거래와_소분류를_묶는다_2021년_3월() throws Exception {
 		ResultActions result = statistics(2021, 3);
 
 		summary(result, 3000, 2000, 1000)
-				.andExpect(jsonPath("$.expenseRatio").value(66.7))
+				.andExpect(jsonPath("$.savingsRate").value(33.3))
 				.andExpect(jsonPath("$.expenseList[0].categoryNum").value(expense))
 				.andExpect(jsonPath("$.expenseList[0].amount").value(2000))
 				.andExpect(jsonPath("$.expenseList[0].ratio").value(100.0));
@@ -142,6 +142,16 @@ class StatisticsIntegrationTest extends IntegrationTestSupport {
 		assertThat(months(result)).containsExactly("2020-10", "2020-11", "2020-12", "2021-01", "2021-02", "2021-03");
 		assertMonth(result, "2021-01", 0, 2000, -2000);       // 12월 조회 땐 빠졌던 1/1 이 여기선 들어간다
 		assertMonth(result, "2021-02", 0, 0, 0);
+	}
+
+	@Test
+	void 저축률은_소수_둘째_자리에서_HALF_UP() throws Exception {
+		// 수입 2,000 · 지출 1,999 → 1 ÷ 2,000 × 100 = 0.05 → HALF_UP 0.1 (HALF_EVEN · 버림이면 0.0)
+		add(token, income, 2000, "2019-01-10");
+		add(token, expense, 1999, "2019-01-11");
+
+		summary(statistics(2019, 1), 2000, 1999, 1)
+				.andExpect(jsonPath("$.savingsRate").value(0.1));
 	}
 
 	// ── 실수 · 악의적 ─────────────────────────────
