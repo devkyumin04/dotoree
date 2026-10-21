@@ -31,6 +31,7 @@ public enum ErrorCode {
 	ACCOUNT_OVER_CREDIT_LIMIT(HttpStatus.BAD_REQUEST, "시작 잔액이 한도를 넘었습니다."),
 	ACCOUNT_BALANCE_NOT_ZERO(HttpStatus.BAD_REQUEST, "잔액이 0 일 때만 닫을 수 있습니다. 이체로 잔액을 0 으로 맞춘 뒤 닫아 주세요."),
 	ACCOUNT_CLOSED(HttpStatus.BAD_REQUEST, "닫힌 계좌에는 거래를 넣을 수 없습니다."),
+	TRANSFER_SAME_ACCOUNT(HttpStatus.BAD_REQUEST, "보내는 계좌와 받는 계좌가 같습니다."),
 
 	// ── 401 — 누구인지 확인이 안 된다
 	// 없음·불일치·파기됨을 한 문구로 — 어느 쪽인지 알려 주지 않는다 (계정 존재 비노출은 가입 409 때문에 이미 반쪽이지만, 굳이 더 열지 않는다)
@@ -47,15 +48,18 @@ public enum ErrorCode {
 	DEFAULT_CATEGORY_NOT_DELETABLE(HttpStatus.FORBIDDEN, "기본 카테고리는 삭제할 수 없습니다."),
 	ACCOUNT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "본인의 계좌만 사용할 수 있습니다."),
 	DEFAULT_ACCOUNT_NOT_CLOSABLE(HttpStatus.FORBIDDEN, "기본 계좌는 닫을 수 없습니다."),
+	TRANSFER_ACCESS_DENIED(HttpStatus.FORBIDDEN, "본인의 이체내역만 사용할 수 있습니다."),
 
 	// ── 404 — 찾는 것이 없다
 	CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 카테고리입니다."),
 	TRANSACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 거래내역입니다."),
 	ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 계좌입니다."),
+	TRANSFER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 이체내역입니다."),
 
 	// ── 409 — 지금 상태와 부딪힌다
 	DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
 	DUPLICATE_ACCOUNT_NAME(HttpStatus.CONFLICT, "같은 이름의 계좌가 이미 있습니다."),
+	TRANSFER_CONFLICT(HttpStatus.CONFLICT, "다른 곳에서 이미 변경된 이체입니다. 새로고침 후 다시 시도해주세요."),
 	TRANSACTION_CONFLICT(HttpStatus.CONFLICT, "다른 곳에서 이미 변경된 내역입니다. 새로고침 후 다시 시도해주세요."),
 
 	// ── 423 — 잠겼다. 실제 문구는 남은 분을 넣어 throw 하는 쪽이 넘긴다(UserService.buildLockedMessage). 아래는 기본값

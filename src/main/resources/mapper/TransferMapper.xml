@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kyumin.dotoree.mapper.TransferMapper">
+
+	<insert id="insertTransfer" parameterType="com.kyumin.dotoree.domain.Transfer"
+		useGeneratedKeys="true" keyProperty="transferNum">
+		INSERT INTO transfers (
+			user_num, from_account_num, to_account_num,
+			transfer_amount, transfer_date, transfer_memo
+		)
+		VALUES (
+			#{userNum}, #{fromAccountNum}, #{toAccountNum},
+			#{transferAmount}, #{transferDate}, #{transferMemo}
+		)
+	</insert>
+
+	<select id="findByTransferNum" resultType="com.kyumin.dotoree.domain.Transfer">
+		SELECT *
+		FROM transfers
+		WHERE transfer_num = #{transferNum}
+		  AND use_yn = 'Y'
+	</select>
+
+	<select id="findByMonth" resultType="com.kyumin.dotoree.dto.TransferResponseDto">
+		SELECT r.transfer_num, r.version,
+				r.from_account_num, f.account_name AS from_account_name,
+				r.to_account_num, t.account_name AS to_account_name,
+				r.transfer_amount, r.transfer_date, r.transfer_memo
+		FROM transfers r
+		JOIN accounts f ON r.from_account_num = f.account_num
+		JOIN accounts t ON r.to_account_num = t.account_num
+		WHERE r.user_num = #{userNum}
+		  AND r.use_yn = 'Y'
+	<![CDATA[
+		  AND r.transfer_date >= #{startDate}
+		  AND r.transfer_date < #{endDate}
+	]]>
+		ORDER BY r.transfer_date DESC, r.transfer_num ASC
+	</select>
+
+	<!-- 낙관적 락 — 거래와 같은 모양(version 이 맞을 때만, ADR-028) -->
+	<update id="updateTransfer" parameterType="com.kyumin.dotoree.domain.Transfer">
+		UPDATE transfers
+		SET from_account_num = #{fromAccountNum},
+			to_account_num = #{toAccountNum},
+			transfer_amount = #{transferAmount},
+			transfer_date = #{transferDate},
+			transfer_memo = #{transferMemo},
+			version = version + 1
+		WHERE transfer_num = #{transferNum}
+		  AND version = #{version}
+		  AND use_yn = 'Y'
+	</update>
+
+	<update id="deleteTransfer">
+		UPDATE transfers
+		SET use_yn = 'N', version = version + 1
+		WHERE transfer_num = #{transferNum}
+		  AND version = #{version}
+		  AND use_yn = 'Y'
+	</update>
+
+</mapper>
