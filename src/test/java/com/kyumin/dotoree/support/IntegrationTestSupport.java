@@ -123,4 +123,30 @@ public abstract class IntegrationTestSupport {
 				.findFirst()
 				.orElse(null);
 	}
+
+	// ── 계좌 부품 (ADR-065) ─────────────────────────
+
+	protected static String accountBody(String name, String type, long openingBalance, Long creditLimit) {
+		String limit = creditLimit == null ? "" : ",\"creditLimit\":" + creditLimit;
+		return "{\"accountName\":\"" + name + "\",\"accountType\":\"" + type + "\",\"openingBalance\":" + openingBalance + limit + "}";
+	}
+
+	protected Integer createAccount(String token, String name, String type, long openingBalance) throws Exception {
+		return read(request(HttpMethod.POST, "/api/accounts", token, accountBody(name, type, openingBalance, null))
+				.andExpect(status().isCreated()), "$.accountNum");
+	}
+
+	// 가입 때 생긴 '현금' 기본 계좌 번호
+	protected Integer defaultAccount(String token) throws Exception {
+		List<Integer> found = read(request(HttpMethod.GET, "/api/accounts", token, null)
+				.andExpect(status().isOk()), "$[?(@.isDefault == true)].accountNum");
+		return found.get(0);
+	}
+
+	// 계좌 목록 API 가 계산한 지금 잔액
+	protected long balanceOf(String token, Integer accountNum) throws Exception {
+		List<Number> found = read(request(HttpMethod.GET, "/api/accounts", token, null)
+				.andExpect(status().isOk()), "$[?(@.accountNum == " + accountNum + ")].balance");
+		return found.get(0).longValue();
+	}
 }

@@ -234,11 +234,6 @@ class AccountIntegrationTest extends IntegrationTestSupport {
 
 	// ── 부품 ─────────────────────────────────
 
-	private static String accountBody(String name, String type, long openingBalance, Long creditLimit) {
-		String limit = creditLimit == null ? "" : ",\"creditLimit\":" + creditLimit;
-		return "{\"accountName\":\"" + name + "\",\"accountType\":\"" + type + "\",\"openingBalance\":" + openingBalance + limit + "}";
-	}
-
 	private Integer createAccount(String name, String type, long openingBalance) throws Exception {
 		return read(request(HttpMethod.POST, ACCOUNTS, token, accountBody(name, type, openingBalance, null))
 				.andExpect(status().isCreated()), "$.accountNum");
