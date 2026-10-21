@@ -15,6 +15,7 @@
         <nav class="sub-nav">
             <a href="/views/personal/personal-main.html" class="active">가계부</a>
             <a href="/views/personal/account.html">계좌</a>
+            <a href="/views/personal/recurring.html">반복</a>
             <a href="/views/personal/category.html">카테고리</a>
             <a href="/views/personal/statistics.html">통계</a>
         </nav>
@@ -32,6 +33,12 @@
             <span>지출 <b id="sumExpense" class="amount-expense">0</b></span>
             <span>이번 달 증감 <small>(수입 − 지출)</small> <b id="sumBalance">0</b></span>
         </div>
+
+        <!-- 반복 예정 (욕조 ② — ADR-067) — 이번 달 남은 예정 + 밀린 예정. [확인]해야 거래 · 이체가 생긴다. 이번 달을 볼 때만 -->
+        <section id="pendingSection" hidden>
+            <h2 class="pending-title">예정 <small><a class="inline-link" href="/views/personal/recurring.html">반복 관리</a></small></h2>
+            <ul id="pendingList"></ul>
+        </section>
 
         <button id="addBtn">+ 추가</button>
 
@@ -86,6 +93,21 @@
 
                 <!-- 모달이 오버레이 위에 뜨므로 에러 메시지도 모달 안에 있어야 보인다 -->
                 <p id="resultMessage" class="result-message"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- 예정 확인 — 실제 금액 · 날짜로 고칠 수 있다(카드값은 달마다 다르고, 주말이면 하루 이틀 다르다) -->
+    <div id="confirmModal" class="modal-overlay" hidden>
+        <div class="modal">
+            <h2>예정 확인</h2>
+            <form id="confirmForm" class="form-container">
+                <p class="form-hint" id="confirmHint"></p>
+                <label>금액 <input type="number" id="confirmAmount" min="1" max="1000000000000" required></label>
+                <label>날짜 <input type="date" id="confirmDate" required></label>
+                <button type="submit" id="confirmSubmitBtn">기록하기</button>
+                <button type="button" id="confirmCancelBtn">취소</button>
+                <p id="confirmMessage" class="result-message"></p>
             </form>
         </div>
     </div>

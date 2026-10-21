@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>반복</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <script src="/js/util/theme.js"></script>
+</head>
+<body>
+    <div class="page-container">
+        <a href="/views/personal/personal-main.html" class="inline-link">← 개인 가계부</a>
+        <h1>반복</h1>
+        <nav class="sub-nav">
+            <a href="/views/personal/personal-main.html">가계부</a>
+            <a href="/views/personal/account.html">계좌</a>
+            <a href="/views/personal/recurring.html" class="active">반복</a>
+            <a href="/views/personal/category.html">카테고리</a>
+            <a href="/views/personal/statistics.html">통계</a>
+        </nav>
+
+        <!-- 반복 예정 (욕조 ② — ADR-067). 규칙만 적어 두면 그날 가계부에 "예정"이 뜨고, [확인]을 눌러야 거래 · 이체가 생긴다 -->
+        <p class="form-hint">월세 · 월급 · 카드값처럼 매달(매년) 같은 돈을 적어 두면, 그날 가계부 맨 위에 예정으로 떠요. [확인]을 누르면 기록되고, 금액이 다르면 그때 고치면 돼요. 계좌 화면에서 다음 달 말까지 예상 잔액도 볼 수 있어요.</p>
+
+        <button id="addBtn">+ 반복 추가</button>
+        <ul id="ruleList"></ul>
+        <p id="emptyMessage" hidden>아직 반복이 없어요.</p>
+    </div>
+
+    <div id="ruleModal" class="modal-overlay" hidden>
+        <div class="modal">
+            <h2 id="modalTitle">반복 추가</h2>
+            <form id="ruleForm" class="form-container">
+                <div class="tabs">
+                    <button type="button" class="tab active" data-type="E">지출</button>
+                    <button type="button" class="tab" data-type="I">수입</button>
+                    <button type="button" class="tab" data-type="T">이체</button>
+                </div>
+
+                <div id="transactionFields">
+                    <label>카테고리 <select id="categoryNum"></select></label>
+                    <label>계좌 <select id="accountNum"></select></label>
+                </div>
+                <div id="transferFields" hidden>
+                    <label>보내는 계좌 <select id="fromAccountNum"></select></label>
+                    <label>받는 계좌 <select id="toAccountNum"></select></label>
+                </div>
+
+                <label>금액 (평소 금액) <input type="number" id="ruleAmount" min="1" max="1000000000000" required></label>
+
+                <label>주기
+                    <select id="repeatType">
+                        <option value="M">매달</option>
+                        <option value="Y">매년</option>
+                    </select>
+                </label>
+                <label id="repeatMonthField" hidden>달
+                    <select id="repeatMonth"></select>
+                </label>
+                <label>날짜(일)
+                    <select id="repeatDay"></select>
+                </label>
+                <p class="form-hint">31일을 고르면 30일까지인 달엔 30일, 2월엔 28·29일에 떠요. 주말이어도 그날 그대로 떠요.</p>
+
+                <label>시작 날짜 <input type="date" id="startDate" required></label>
+                <label>끝 날짜 (할부면 마지막 달, 비우면 계속) <input type="date" id="endDate"></label>
+                <label>메모 <input type="text" id="ruleMemo" maxlength="100"></label>
+
+                <button type="submit" id="submitBtn">저장</button>
+                <button type="button" id="cancelBtn">취소</button>
+                <p id="resultMessage" class="result-message"></p>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/util/authGuard.js"></script>
+    <script src="/js/util/apiClient.js"></script>
+    <script src="/js/util/format.js"></script>
+    <script src="/js/util/buttonUtil.js"></script>
+    <script src="/js/personal/recurring.js"></script>
+</body>
+</html>

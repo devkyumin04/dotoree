@@ -3,6 +3,7 @@ requireLogin();
 // 계좌 화면 — 순자산 · 전날 대비 · 계좌 목록 · 추가/수정/닫기 (ADR-065)
 // 잔액 · 순자산은 전부 서버 값 그대로(계산 없음, ADR-038)
 let accounts = [];
+let rules = [];          // 반복 — 닫을 때 "이 계좌를 쓰는 반복도 같이 끝낼까요?" (ADR-067)
 let editingNum = null;
 
 const TYPE_LABEL = { C: '현금', B: '통장', M: '마이너스통장', K: '카드' };
@@ -21,13 +22,44 @@ const resultMessage = document.getElementById('resultMessage');
 const typeSelect = document.getElementById('accountType');
 
 async function loadAccounts() {
-    const [list, summary] = await Promise.all([
+    const [list, summary, forecast, ruleList] = await Promise.all([
         apiRequest('/api/accounts', 'GET'),
         apiRequest('/api/accounts/summary', 'GET'),
+        apiRequest('/api/recurring/forecast', 'GET'),
+        apiRequest('/api/recurring', 'GET'),
     ]);
-    if (!list || !summary) return;
+    if (!list || !summary || !forecast || !ruleList) return;
     accounts = list;
+    rules = ruleList;
     render(summary);
+    renderForecast(forecast);
+}
+
+// 예상 잔액 — 계좌마다 다음 달 말 잔액, 모자라는 계좌는 "11-01 −200,000 모자람"
+function renderForecast(f) {
+    document.getElementById('forecastUntil').textContent = `(${f.untilDate.slice(5).replace('-', '/')}까지)`;
+    document.getElementById('forecastTotal').textContent = won(f.forecastTotal);
+    const listEl2 = document.getElementById('forecastList');
+    listEl2.innerHTML = '';
+    document.getElementById('forecastEmpty').hidden = rules.length > 0;
+    if (rules.length === 0) return;
+    f.accounts.forEach(a => {
+        const li = document.createElement('li');
+        li.className = 'account-item forecast-item';
+        const warn = a.shortage
+            ? `<small class="shortage">${a.lowestDate.slice(5)} ${won(a.lowestBalance)} 모자람</small>`
+            : '';
+        li.innerHTML = `
+            <span class="account-name">${escapeHtml(a.accountName)} ${warn}</span>
+            <span class="account-balance ${a.forecastBalance < 0 ? 'amount-expense' : ''}">${won(a.forecastBalance)}</span>
+        `;
+        listEl2.appendChild(li);
+    });
+}
+
+// 이 계좌를 쓰는 반복 수
+function rulesUsing(accountNum) {
+    return rules.filter(r => r.accountNum === accountNum || r.fromAccountNum === accountNum || r.toAccountNum === accountNum).length;
 }
 
 function render(summary) {
@@ -185,15 +217,20 @@ adjustForm.addEventListener('submit', async (e) => {
 // 잔액이 남아 있으면 "0원으로 맞추고 닫기"를 한 번에 — 잔액 맞추기(실제 잔액 0) 뒤 닫기
 async function closeAccount(id) {
     const a = accounts.find(x => x.accountNum === id);
-    const question = a.balance === 0
-        ? `'${a.accountName}' 계좌를 닫을까요? 지난 거래는 그대로 남아요.`
-        : `'${a.accountName}'에 ${won(a.balance)}원이 남아 있어요. 0원으로 맞추고 닫을까요? 지난 거래는 그대로 남아요.`;
+    const usedBy = rulesUsing(id);
+    const question = [
+        a.balance === 0
+            ? `'${a.accountName}' 계좌를 닫을까요?`
+            : `'${a.accountName}'에 ${won(a.balance)}원이 남아 있어요. 0원으로 맞추고 닫을까요?`,
+        usedBy > 0 ? `이 계좌를 쓰는 반복 ${usedBy}개도 같이 끝나요.` : '',
+        '지난 거래는 그대로 남아요.',
+    ].filter(Boolean).join(' ');
     if (!confirm(question)) return;
     try {
         if (a.balance !== 0) {
             await apiRequest(`/api/accounts/${id}/adjustments`, 'POST', { actualBalance: 0 });
         }
-        await apiRequest(`/api/accounts/${id}`, 'DELETE');
+        await apiRequest(`/api/accounts/${id}${usedBy > 0 ? '?endRecurring=true' : ''}`, 'DELETE');
         await loadAccounts();
     } catch (error) {
         alert(error.message);

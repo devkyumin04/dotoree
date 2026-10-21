@@ -312,3 +312,15 @@ a {
 .trend-item .trend-worth { display: block; font-size: .8rem; opacity: .6; }
 .home-tips { margin: 8px 0; padding-left: 18px; font-size: .9rem; line-height: 1.6; }
 .home-shot .account-item { padding: 6px 4px; }
+
+/* ── 반복 예정 (욕조 ② — ADR-067) ───────────────── */
+
+/* 가계부 맨 위 예정 — 아직 기록 안 된 돈이라 점선 */
+.pending-title { font-size: 1rem; margin: 8px 0; }
+.pending-title small { font-weight: normal; margin-left: 8px; }
+.pending-item { border-bottom-style: dashed; }
+.pending-item .overdue { color: var(--expense); font-size: .8rem; margin-left: 4px; }
+
+/* 계좌 화면 예상 잔액 — 모자란 계좌는 빨간 글씨 + 그날 */
+.forecast-title { font-size: 1rem; margin: 24px 0 8px; }
+.forecast-item .shortage { color: var(--expense); font-size: .85rem; }
