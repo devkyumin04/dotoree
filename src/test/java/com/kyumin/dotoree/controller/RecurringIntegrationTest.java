@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.LocalDate;
 import java.util.List;
 
+import org.apache.ibatis.session.SqlSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,12 +18,17 @@ import com.kyumin.dotoree.support.IntegrationTestSupport;
 
 // 반복 예정 — 규칙 · 남은 예정 · 확인 · 건너뛰기 · 예상 잔액 · 계좌 닫기 · 카테고리 지우기 (ADR-067, 통합 테스트)
 // 시작 날짜는 API 로는 오늘 이후만 된다 → 지난 예정이 필요한 장면은 만든 뒤 JdbcTemplate 으로 시작 날짜를 옮긴다(날짜가 고정돼 언제 돌려도 같다)
+// 옮긴 뒤엔 MyBatis 캐시를 비운다 — 테스트는 한 트랜잭션이라, 규칙을 만들 때 읽은 목록(시작 = 오늘)을 MyBatis 가 기억해 두고
+// JdbcTemplate 으로 바꾼 걸 모른다(PR #36 첫 CI 에서 3개 실패). 운영은 요청마다 따로라 상관없다
 class RecurringIntegrationTest extends IntegrationTestSupport {
 
 	private static final String RULES = "/api/recurring";
 
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	private SqlSession sqlSession;
 
 	private String token;
 	private Integer rent;
@@ -63,6 +69,7 @@ class RecurringIntegrationTest extends IntegrationTestSupport {
 	void 끝_날짜_뒤엔_예정이_없다() throws Exception {
 		Integer rule = createRule(monthlyBody(rent, bank, 50_000, 10));
 		jdbcTemplate.update("UPDATE recurring_rules SET start_date = '2026-01-01', end_date = '2026-03-31' WHERE rule_num = ?", rule);
+		sqlSession.clearCache();
 
 		List<String> dates = read(pending("2026-06-30"), "$[*].scheduledDate");
 		assertThat(dates).containsExactly("2026-01-10", "2026-02-10", "2026-03-10");
@@ -244,6 +251,7 @@ class RecurringIntegrationTest extends IntegrationTestSupport {
 
 	private void moveStart(Integer ruleNum, String startDate) {
 		jdbcTemplate.update("UPDATE recurring_rules SET start_date = ? WHERE rule_num = ?", startDate, ruleNum);
+		sqlSession.clearCache();
 	}
 
 	private org.springframework.test.web.servlet.ResultActions pending(String until) throws Exception {
