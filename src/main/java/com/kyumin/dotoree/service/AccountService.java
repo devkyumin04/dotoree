@@ -1,5 +1,9 @@
 package com.kyumin.dotoree.service;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -8,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.kyumin.dotoree.domain.Account;
 import com.kyumin.dotoree.dto.AccountRequestDto;
 import com.kyumin.dotoree.dto.AccountResponseDto;
+import com.kyumin.dotoree.dto.BalanceSummaryResponseDto;
+import com.kyumin.dotoree.dto.MonthlyBalanceDto;
 import com.kyumin.dotoree.exception.BusinessException;
 import com.kyumin.dotoree.exception.ErrorCode;
 import com.kyumin.dotoree.mapper.AccountMapper;
@@ -21,6 +27,10 @@ import lombok.RequiredArgsConstructor;
 public class AccountService {
 
 	private final AccountMapper accountMapper;
+	private final Clock clock;
+
+	// 월말 잔액 추이 — 통계의 수입 · 지출 추이와 같은 6개월
+	private static final int TREND_MONTHS = 6;
 
 	// 가입 때 '현금' 기본 계좌 — 가입 '미분류' 카테고리와 같은 자리. 부르는 쪽(가입)의 트랜잭션에 같이 묶인다
 	public Integer createDefaultAccount(Integer userNum) {
@@ -29,6 +39,7 @@ public class AccountService {
 		account.setAccountName(Account.DEFAULT_ACCOUNT_NAME);
 		account.setAccountType(Account.TYPE_CASH);
 		account.setOpeningBalance(0L);
+		account.setOpeningDate(null);    // 시작 날짜 없음 = 처음부터 — 아무도 "그날 현금 0원"이라고 말한 적이 없다 (V6)
 		account.setIsDefaultYn("Y");
 		accountMapper.insertAccount(account);
 		return account.getAccountNum();
@@ -55,15 +66,36 @@ public class AccountService {
 		account.setAccountType(requestDto.getAccountType());
 		account.setOpeningBalance(requestDto.getOpeningBalance());
 		account.setCreditLimit(requestDto.getCreditLimit());
+		// 시작 날짜 — 비우면 오늘. 시작 잔액은 "그날 기준 잔액" (ADR-065 ⑦)
+		account.setOpeningDate(requestDto.getOpeningDate() != null ? requestDto.getOpeningDate() : LocalDate.now(clock));
 		account.setIsDefaultYn("N");
 		accountMapper.insertAccount(account);
 
-		// 방금 만든 계좌라 거래 · 이체가 없다 — 잔액 = 시작 잔액
-		return toResponse(account, account.getOpeningBalance());
+		// 시작 날짜를 과거로 잡으면 그 뒤에 이미 적어 둔 거래가 있을 수 있다 — 계산 한 곳에 맡긴다
+		return toResponse(account, accountMapper.calculateBalance(account.getAccountNum(), null));
 	}
 
 	public List<AccountResponseDto> getAccounts(Integer userNum) {
-		return accountMapper.findOpenAccounts(userNum);
+		return accountMapper.findOpenAccounts(userNum, null);
+	}
+
+	// 그날 기준 전체 잔액 합계 + 전날 대비. date 를 비우면 오늘
+	public BalanceSummaryResponseDto getSummary(Integer userNum, LocalDate date) {
+		LocalDate target = (date != null) ? date : LocalDate.now(clock);
+		long total = accountMapper.totalBalance(userNum, target);
+		long previous = accountMapper.totalBalance(userNum, target.minusDays(1));
+		return new BalanceSummaryResponseDto(target, total, previous, total - previous);
+	}
+
+	// year-month 를 마지막으로 6개월, 각 달 말일 기준 전체 잔액 합계 (오래된 달 → 최근 달)
+	public List<MonthlyBalanceDto> getMonthlyBalances(Integer userNum, int year, int month) {
+		YearMonth last = YearMonth.of(year, month);
+		List<MonthlyBalanceDto> result = new ArrayList<>();
+		for (int i = TREND_MONTHS - 1; i >= 0; i--) {
+			YearMonth target = last.minusMonths(i);
+			result.add(new MonthlyBalanceDto(target.toString(), accountMapper.totalBalance(userNum, target.atEndOfMonth())));
+		}
+		return result;
 	}
 
 	public AccountResponseDto updateAccount(Integer userNum, Integer accountNum, AccountRequestDto requestDto) {
@@ -75,9 +107,12 @@ public class AccountService {
 		account.setAccountType(requestDto.getAccountType());
 		account.setOpeningBalance(requestDto.getOpeningBalance());
 		account.setCreditLimit(requestDto.getCreditLimit());
+		if (requestDto.getOpeningDate() != null) {
+			account.setOpeningDate(requestDto.getOpeningDate());
+		}
 		accountMapper.updateAccount(account);
 
-		return toResponse(account, accountMapper.calculateBalance(accountNum));
+		return toResponse(account, accountMapper.calculateBalance(accountNum, null));
 	}
 
 	// 닫기 — 잔액 0 일 때만. 거래 · 이체 기록은 이 계좌에 그대로 남는다 (ADR-065 ⑥)
@@ -87,7 +122,7 @@ public class AccountService {
 		if (account.isDefault()) {
 			throw new BusinessException(ErrorCode.DEFAULT_ACCOUNT_NOT_CLOSABLE);
 		}
-		if (accountMapper.calculateBalance(accountNum) != 0) {
+		if (accountMapper.calculateBalance(accountNum, null) != 0) {
 			throw new BusinessException(ErrorCode.ACCOUNT_BALANCE_NOT_ZERO);
 		}
 		accountMapper.closeAccount(accountNum);
@@ -160,6 +195,7 @@ public class AccountService {
 		responseDto.setAccountType(account.getAccountType());
 		responseDto.setOpeningBalance(account.getOpeningBalance());
 		responseDto.setCreditLimit(account.getCreditLimit());
+		responseDto.setOpeningDate(account.getOpeningDate());
 		responseDto.setIsDefault(account.isDefault());
 		responseDto.setBalance(balance);
 		return responseDto;

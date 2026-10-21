@@ -5,30 +5,41 @@
 <mapper namespace="com.kyumin.dotoree.mapper.AccountMapper">
 
 	<!-- 잔액 계산은 여기 한 곳 (ADR-065) — 시작 잔액 + 수입 − 지출 + 받은 이체 − 보낸 이체. 삭제된(use_yn='N') 거래 · 이체는 빼고
-	     a = accounts 별칭. 목록과 한 계좌 계산이 같은 식을 쓴다
+	     · 시작 날짜(opening_date) 이후 거래 · 이체만 — 시작 잔액에 이미 들어 있는 지난 돈을 두 번 세지 않는다. NULL(기본 계좌) = 처음부터
+	     · untilDate 가 있으면 "그날 기준" — 그날까지의 거래만, 시작 날짜가 그날보다 뒤면 시작 잔액도 아직 없다
+	     a = accounts 별칭. 부르는 문장은 전부 untilDate 파라미터를 가진다(null = 지금)
 	     느려지면 이 안쪽만 "월말 잔액 스냅샷 + 그 뒤 합"으로 바꾼다 -->
 	<sql id="balanceOf">
-		(a.opening_balance
+		(<choose>
+			<when test="untilDate == null">a.opening_balance</when>
+			<otherwise>CASE WHEN a.opening_date IS NULL OR a.opening_date &lt;= #{untilDate} THEN a.opening_balance ELSE 0 END</otherwise>
+		</choose>
 			+ COALESCE((SELECT SUM(CASE t.trans_type WHEN 'I' THEN t.trans_amount ELSE -t.trans_amount END)
 			            FROM personal_transactions t
-			            WHERE t.account_num = a.account_num AND t.use_yn = 'Y'), 0)
+			            WHERE t.account_num = a.account_num AND t.use_yn = 'Y'
+			              AND (a.opening_date IS NULL OR t.trans_date &gt;= a.opening_date)
+			            <if test="untilDate != null">  AND t.trans_date &lt;= #{untilDate}</if>), 0)
 			+ COALESCE((SELECT SUM(r.transfer_amount)
 			            FROM transfers r
-			            WHERE r.to_account_num = a.account_num AND r.use_yn = 'Y'), 0)
+			            WHERE r.to_account_num = a.account_num AND r.use_yn = 'Y'
+			              AND (a.opening_date IS NULL OR r.transfer_date &gt;= a.opening_date)
+			            <if test="untilDate != null">  AND r.transfer_date &lt;= #{untilDate}</if>), 0)
 			- COALESCE((SELECT SUM(r.transfer_amount)
 			            FROM transfers r
-			            WHERE r.from_account_num = a.account_num AND r.use_yn = 'Y'), 0))
+			            WHERE r.from_account_num = a.account_num AND r.use_yn = 'Y'
+			              AND (a.opening_date IS NULL OR r.transfer_date &gt;= a.opening_date)
+			            <if test="untilDate != null">  AND r.transfer_date &lt;= #{untilDate}</if>), 0))
 	</sql>
 
 	<insert id="insertAccount" parameterType="com.kyumin.dotoree.domain.Account"
 		useGeneratedKeys="true" keyProperty="accountNum">
 		INSERT INTO accounts (
 			user_num, account_name, account_type,
-			opening_balance, credit_limit, is_default_yn
+			opening_balance, credit_limit, opening_date, is_default_yn
 		)
 		VALUES (
 			#{userNum}, #{accountName}, #{accountType},
-			#{openingBalance}, #{creditLimit}, #{isDefaultYn}
+			#{openingBalance}, #{creditLimit}, #{openingDate}, #{isDefaultYn}
 		)
 	</insert>
 
@@ -48,7 +59,7 @@
 
 	<select id="findOpenAccounts" resultType="com.kyumin.dotoree.dto.AccountResponseDto">
 		SELECT a.account_num, a.account_name, a.account_type,
-				a.opening_balance, a.credit_limit,
+				a.opening_balance, a.credit_limit, a.opening_date,
 				(a.is_default_yn = 'Y') AS is_default,
 				<include refid="balanceOf"/> AS balance
 		FROM accounts a
@@ -61,6 +72,12 @@
 		SELECT <include refid="balanceOf"/>
 		FROM accounts a
 		WHERE a.account_num = #{accountNum}
+	</select>
+
+	<select id="totalBalance" resultType="long">
+		SELECT COALESCE(SUM(<include refid="balanceOf"/>), 0)
+		FROM accounts a
+		WHERE a.user_num = #{userNum}
 	</select>
 
 	<select id="countOpenByName" resultType="int">
@@ -79,7 +96,8 @@
 		SET account_name = #{accountName},
 			account_type = #{accountType},
 			opening_balance = #{openingBalance},
-			credit_limit = #{creditLimit}
+			credit_limit = #{creditLimit},
+			opening_date = #{openingDate}
 		WHERE account_num = #{accountNum}
 		  AND use_yn = 'Y'
 	</update>

@@ -1,5 +1,7 @@
 package com.kyumin.dotoree.dto;
 
+import java.time.LocalDate;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,6 +17,7 @@ public class AccountResponseDto {
 	private String accountType;
 	private Long openingBalance;
 	private Long creditLimit;
+	private LocalDate openingDate;
 	private Boolean isDefault;
 	private Long balance;
 }
