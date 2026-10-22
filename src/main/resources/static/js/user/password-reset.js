@@ -14,12 +14,6 @@ setupEmailCodeButton({
     codeInput,
 });
 
-// 다른 화면에서 이메일을 넘겨 왔으면 채운다 (login.html 의 링크 — ?email=)
-const presetEmail = new URLSearchParams(window.location.search).get('email');
-if (presetEmail) {
-    emailInput.value = presetEmail;
-}
-
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
