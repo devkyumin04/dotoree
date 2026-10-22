@@ -19,7 +19,6 @@ import com.kyumin.dotoree.dto.NicknameRequestDto;
 import com.kyumin.dotoree.dto.PasswordChangeRequestDto;
 import com.kyumin.dotoree.dto.PasswordConfirmRequestDto;
 import com.kyumin.dotoree.dto.SignupRequestDto;
-import com.kyumin.dotoree.dto.SignupResponseDto;
 import com.kyumin.dotoree.dto.UserInfoResponseDto;
 import com.kyumin.dotoree.security.RefreshCookieProvider;
 import com.kyumin.dotoree.service.UserService;
@@ -35,12 +34,15 @@ public class UserController {
     private final UserService userService;
 	private final RefreshCookieProvider refreshCookieProvider;
 
+    // 가입 = 메일 코드 확인 + 계정 + 바로 로그인 (ADR-068) — 응답은 로그인과 같은 모양(Refresh 쿠키 + 본문의 Access), 상태만 201
     @PostMapping("/signup")
-    public ResponseEntity<SignupResponseDto> signup(@Valid @RequestBody SignupRequestDto requestDto) {
+    public ResponseEntity<LoginResponseDto> signup(@Valid @RequestBody SignupRequestDto requestDto) {
 
-        SignupResponseDto responseDto = userService.signup(requestDto);
+		LoginResult signupResult = userService.signup(requestDto);
+		ResponseCookie refreshCookie = refreshCookieProvider.create(signupResult.getRawRefreshToken());
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+		return ResponseEntity.status(HttpStatus.CREATED).header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+				.body(signupResult.getLoginResponse());
     }
     
     @PostMapping("/login")

@@ -39,10 +39,9 @@ class RefreshIntegrationTest extends IntegrationTestSupport {
 
 	@BeforeEach
 	void setUp() throws Exception {
-		userNum = read(request(HttpMethod.POST, "/api/users/signup", null, """
-				{"email":"%s","password":"%s","nickname":"dotoree"}
-				""".formatted(EMAIL, PASSWORD))
-				.andExpect(status().isCreated()), "$.userNum");
+		userNum = signup(EMAIL);
+		// 가입하면 바로 로그인돼 카드가 한 장 생긴다(ADR-068) — 이 묶음의 기기(Device)가 든 카드가 아니라 지운다. 살아 있는 카드 수를 세는 테스트가 기기 것만 보게
+		jdbcTemplate.update("DELETE FROM refresh_tokens WHERE user_num = ?", userNum);
 	}
 
 	// ── 1. 발급 · 재발급(로테이션) ─────────────────────

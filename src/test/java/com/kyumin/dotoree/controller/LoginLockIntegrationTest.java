@@ -48,16 +48,13 @@ class LoginLockIntegrationTest extends IntegrationTestSupport {
 
 	@BeforeEach
 	void setUp() throws Exception {
-		deleteAccount(EMAIL);    // 지난 실행이 중간에 죽어 남은 계정이 있으면
-		userNum = read(request(HttpMethod.POST, "/api/users/signup", null, """
-				{"email":"%s","password":"%s","nickname":"dotoree"}
-				""".formatted(EMAIL, PASSWORD))
-				.andExpect(status().isCreated()), "$.userNum");
+		deleteCommittedAccount(EMAIL);    // 지난 실행이 중간에 죽어 남은 계정이 있으면
+		userNum = signup(EMAIL);
 	}
 
 	@AfterEach
 	void tearDown() {
-		deleteAccount(EMAIL);
+		deleteCommittedAccount(EMAIL);
 	}
 
 	// ── 1·2. 잠기기 전 · 5회째 ──────────────────────
@@ -187,25 +184,5 @@ class LoginLockIntegrationTest extends IntegrationTestSupport {
 				.findFirst()
 				.orElseThrow();
 		return line.substring("refresh_token=".length(), line.indexOf(';'));
-	}
-
-	// 커밋된 계정 지우기 — 파기(UserService.purgeUser)와 같은 FK 순서. 상태('A'·'W')와 상관없이
-	private void deleteAccount(String email) {
-		User user = userMapper.findByEmail(email);
-		if (user == null) {
-			return;
-		}
-		Integer target = user.getUserNum();
-		userMapper.deleteOccurrencesOf(target);
-		userMapper.deleteRecurringRulesOf(target);
-		userMapper.deleteTransactionsOf(target);
-		userMapper.deleteTransfersOf(target);
-		userMapper.deleteAdjustmentsOf(target);
-		userMapper.deleteAccountsOf(target);
-		userMapper.deleteChildCategoriesOf(target);
-		userMapper.deleteCategoriesOf(target);
-		userMapper.deleteRefreshTokensOf(target);
-		// deleteUser 는 'W'(탈퇴 유예) 계정만 지운다(파기 안전장치) — 활성 계정도 지워야 해서 여기만 직접
-		jdbcTemplate.update("DELETE FROM users WHERE user_num = ?", target);
 	}
 }

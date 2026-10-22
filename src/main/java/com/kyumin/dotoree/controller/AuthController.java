@@ -6,16 +6,22 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kyumin.dotoree.dto.EmailCodeRequestDto;
+import com.kyumin.dotoree.dto.PasswordResetRequestDto;
 import com.kyumin.dotoree.dto.RefreshResponseDto;
 import com.kyumin.dotoree.dto.RefreshResult;
 import com.kyumin.dotoree.exception.BusinessException;
 import com.kyumin.dotoree.exception.ErrorCode;
 import com.kyumin.dotoree.security.RefreshCookieProvider;
+import com.kyumin.dotoree.service.EmailVerificationService;
 import com.kyumin.dotoree.service.RefreshTokenService;
+import com.kyumin.dotoree.service.UserService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -26,6 +32,8 @@ public class AuthController {
 
 	private final RefreshTokenService refreshTokenService;
 	private final RefreshCookieProvider refreshCookieProvider;
+	private final EmailVerificationService emailVerificationService;
+	private final UserService userService;
 
 	@PostMapping("/refresh")
 	public ResponseEntity<RefreshResponseDto> refresh(@CookieValue(name = "refresh_token", required = false) String rawToken) {
@@ -45,5 +53,20 @@ public class AuthController {
 		ResponseCookie cookie = refreshCookieProvider.expire();
 
 		return ResponseEntity.status(HttpStatus.NO_CONTENT).header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
+	}
+
+	// 인증 코드 받기 — 가입(S) · 비밀번호 재설정(P) (ADR-068). 보냈으면 204
+	// 로그인 전에 부르므로 /api/auth/** permitAll 범위에 둔다(SecurityConfig)
+	@PostMapping("/email-codes")
+	public ResponseEntity<Void> sendEmailCode(@Valid @RequestBody EmailCodeRequestDto requestDto) {
+		emailVerificationService.sendCode(requestDto);
+		return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+	}
+
+	// 비밀번호 재설정 — 주소 + 코드 + 새 비밀번호. 바뀌면 204, 화면은 로그인으로 보낸다
+	@PostMapping("/password-reset")
+	public ResponseEntity<Void> resetPassword(@Valid @RequestBody PasswordResetRequestDto requestDto) {
+		userService.resetPassword(requestDto);
+		return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
 	}
 }

@@ -26,4 +26,7 @@ public interface RefreshTokenMapper {
 	// 전 세션 폐기 — 비번 변경·탈퇴 때 그 사용자의 살아 있는 줄을 일행 가리지 않고 전부 폐기 (ADR-055 선택 2·16)
 	// void — 0행(살아 있는 카드가 원래 없음)이든 n행이든 서비스가 할 일이 같다. 숫자로 가를 게 없다
 	void revokeAllOfUser(@Param("userNum") Integer userNum, @Param("revokedAt") LocalDateTime revokedAt);
+
+	// 정리 — before 보다 먼저 만료된 줄 삭제(폐기 여부 상관없이). 지운 줄 수 (ADR-068)
+	int deleteExpiredBefore(@Param("before") LocalDateTime before);
 }

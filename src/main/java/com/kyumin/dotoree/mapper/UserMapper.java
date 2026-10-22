@@ -35,6 +35,9 @@ public interface UserMapper {
     int updateNickname(@Param("userNum") Integer userNum, @Param("nickname") String nickname);
 	int updatePassword(@Param("userNum") Integer userNum, @Param("encodedPassword") String encodedPassword);
 
+	// 비밀번호 재설정 — 새 비번 + 로그인 잠금 풀기. 상태('A'·'W') 상관없이 (ADR-068). 0행 = 없는 계정
+	int resetPassword(@Param("userNum") Integer userNum, @Param("encodedPassword") String encodedPassword);
+
     // ── 탈퇴 · 복구 · 파기 (ADR-052) ──────────────────────
 	// 사용자 탈퇴, 0행이면 업데이트된 행 없다는 의미(이미 탈퇴한 계정이면 0행)
 	int withdraw(@Param("userNum") Integer userNum, @Param("withdrawnAt") LocalDateTime withdrawnAt);
@@ -67,6 +70,9 @@ public interface UserMapper {
 	void deleteCategoriesOf(@Param("userNum") Integer userNum);
 
 	void deleteRefreshTokensOf(@Param("userNum") Integer userNum);
+
+	// 그 계정 주소로 보낸 인증 코드 — FK 는 없지만 주소(개인정보)라 같이 지운다 (ADR-068)
+	void deleteVerificationsOf(@Param("userNum") Integer userNum);
 
 	void deleteUser(@Param("userNum") Integer userNum);
 

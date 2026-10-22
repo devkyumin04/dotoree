@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kyumin.dotoree.mapper.AuthVerificationMapper">
+
+	<insert id="insertVerification" parameterType="com.kyumin.dotoree.domain.AuthVerification"
+		useGeneratedKeys="true" keyProperty="verificationNum">
+		INSERT INTO auth_verifications (
+			email, purpose, code_hash, fail_count, created_at
+		)
+		VALUES (
+			#{email}, #{purpose}, #{codeHash}, 0, #{createdAt}
+		)
+	</insert>
+
+	<select id="findLastSentAt" resultType="java.time.LocalDateTime">
+		SELECT MAX(created_at)
+		FROM auth_verifications
+		WHERE email = #{email}
+	</select>
+
+	<select id="countSentSince" resultType="int">
+		SELECT COUNT(*)
+		FROM auth_verifications
+		WHERE email = #{email}
+		  AND created_at &gt; #{since}
+	</select>
+
+	<!-- 같은 시각에 두 통이면 번호가 큰 쪽 — 번호는 넣은 순서 -->
+	<select id="findLatest" resultType="com.kyumin.dotoree.domain.AuthVerification">
+		SELECT *
+		FROM auth_verifications
+		WHERE email = #{email}
+		  AND purpose = #{purpose}
+		ORDER BY verification_num DESC
+		LIMIT 1
+	</select>
+
+	<update id="increaseFailCount">
+		UPDATE auth_verifications
+		SET fail_count = fail_count + 1
+		WHERE verification_num = #{verificationNum}
+	</update>
+
+	<update id="markUsed">
+		UPDATE auth_verifications
+		SET used_at = #{usedAt}
+		WHERE verification_num = #{verificationNum}
+		  AND used_at IS NULL
+	</update>
+
+	<delete id="deleteSentBefore">
+		DELETE FROM auth_verifications
+		WHERE created_at &lt; #{before}
+	</delete>
+
+</mapper>

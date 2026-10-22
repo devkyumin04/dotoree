@@ -23,6 +23,11 @@ public class SignupRequestDto {
 	@Pattern(regexp = "^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).*$", message = "비밀번호는 영문, 숫자, 특수문자를 각각 1자 이상 포함해야 합니다.")
 	private String password;
 
+	// 메일로 받은 인증 코드 (ADR-068)
+	@NotBlank(message = "인증 코드를 입력해주세요.")
+	@Pattern(regexp = "^[0-9]{6}$", message = "인증 코드는 숫자 6자리입니다.")
+	private String code;
+
 	@NotBlank(message="닉네임을 입력해주세요")
 	@Size(min = 1, max = 20, message = "닉네임은 1자 이상 20자 이하로 입력해주세요.")
 	private String nickname;
