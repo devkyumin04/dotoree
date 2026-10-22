@@ -70,6 +70,13 @@
 		  AND user_status = 'A'
 	</update>
 
+	<!-- 비밀번호 재설정 (ADR-068) — 잠금도 같이 푼다(ADR-057). 탈퇴 유예('W')도 바꾼다 — 새 비번으로 로그인해 탈퇴를 취소할 수 있게 -->
+	<update id="resetPassword">
+		UPDATE users
+		SET user_pw = #{encodedPassword}, login_fail_count = 0, locked_until = NULL
+		WHERE user_num = #{userNum}
+	</update>
+
 	<!-- ── 탈퇴 · 복구 · 파기 (ADR-052) ─────────────────────
 	     시각은 전부 자바가 정해 넘긴다 — 유예 기준(purgeBefore)도 자바가 계산 (ADR-060) -->
 
@@ -110,7 +117,8 @@
 	     (2026-10-20 V4 · 2026-10-22 V8 · V9 추가)
 	     카테고리는 자기참조 FK(FK_PCAT_PARENT) 때문에 소분류 → 나머지 두 번 (qa/reset-data.sql 과 같은 이유, 2계층이라 두 번이면 끝)
 	     refresh_tokens 는 계정만 참조해 deleteUser 앞이면 어디든 된다 (2026-09-27 추가 — 빠뜨려 CI #64 파기 실패)
-	     ★ users 를 참조하는 테이블을 쓰기 시작하면(auth_verifications · social_accounts · 공동 가계부)
+	     auth_verifications 는 FK 가 없지만 주소(개인정보)라 같이 지운다 (2026-10-22 V10 추가)
+	     ★ users 를 참조하는 테이블을 쓰기 시작하면(social_accounts · 공동 가계부)
 	       여기에 그 테이블을 먼저 지우는 문장을 추가한다. 안 하면 FK 1451 로 그 계정 파기가 실패한다(로그 error, 다음 날 재시도) -->
 	<delete id="deleteOccurrencesOf">
 		DELETE FROM recurring_occurrences
@@ -156,6 +164,14 @@
 	<delete id="deleteRefreshTokensOf">
 		DELETE FROM refresh_tokens
 		WHERE user_num = #{userNum}
+	</delete>
+
+	<!-- 인증 코드 (V10, ADR-068) — user_num 이 없는 테이블이라 계정 주소로 찾는다. FK 가 없어 순서는 상관없지만 deleteUser 앞이어야 주소를 읽을 수 있다 -->
+	<delete id="deleteVerificationsOf">
+		DELETE av
+		FROM auth_verifications av
+		JOIN users u ON u.user_email = av.email
+		WHERE u.user_num = #{userNum}
 	</delete>
 
 	<delete id="deleteUser">

@@ -107,7 +107,8 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 		request(HttpMethod.POST, WITHDRAW, token, passwordBody(PASSWORD))
 				.andExpect(status().isNoContent());
 
-		request(HttpMethod.POST, "/api/users/signup", null, signupBody(EMAIL))
+		// 코드 받기에서 먼저 409 — 메일을 헛되이 보내지 않는다 (ADR-068)
+		request(HttpMethod.POST, "/api/auth/email-codes", null, emailCodeBody(EMAIL, "S"))
 				.andExpect(status().isConflict());
 	}
 
@@ -153,24 +154,16 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 
 		request(HttpMethod.POST, "/api/users/login", null, loginBody(EMAIL))
 				.andExpect(status().isUnauthorized());
-		request(HttpMethod.POST, "/api/users/signup", null, signupBody(EMAIL))
-				.andExpect(status().isCreated());
+		// 파기가 이 주소의 인증 코드 줄도 지워 60초 제한 없이 다시 받는다
+		assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM auth_verifications WHERE email = ?", Integer.class, EMAIL)).isZero();
+		signupRequest(EMAIL).andExpect(status().isCreated());
 	}
 
 	// ── 부품 ─────────────────────────────────
 
-	private Integer signup(String email) throws Exception {
-		return read(request(HttpMethod.POST, "/api/users/signup", null, signupBody(email))
-				.andExpect(status().isCreated()), "$.userNum");
-	}
-
 	private String login(String email) throws Exception {
 		return read(request(HttpMethod.POST, "/api/users/login", null, loginBody(email))
 				.andExpect(status().isOk()), "$.accessToken");
-	}
-
-	private static String signupBody(String email) {
-		return "{\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\",\"nickname\":\"dotoree\"}";
 	}
 
 	private static String loginBody(String email) {

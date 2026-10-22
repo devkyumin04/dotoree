@@ -25,3 +25,9 @@ jwt:
 dotoree:
   purge:
     cron: "0 30 3 * * *" # 탈퇴 계정 파기 — 매일 03:30 KST, 04:00 백업 전 (ADR-052). 환경변수 DOTOREE_PURGE_CRON 으로 덮을 수 있다
+  auth-cleanup:
+    cron: "0 40 3 * * *" # 하루 지난 인증 코드 · 만료 Refresh 정리 — 매일 03:40 KST, 파기 뒤 · 백업 전 (ADR-068). DOTOREE_AUTHCLEANUP_CRON 으로 덮을 수 있다
+  mail:
+    sender: ses # ses(운영 — 인스턴스 역할로 SES 발송) · log(로컬 — 콘솔에 찍기). 그 밖의 값은 기동 실패 (MailConfig, ADR-068)
+    region: ap-northeast-2 # SES 프로덕션 액세스는 리전마다 따로 — 승인받은 서울
+    from: "dotoree <no-reply@dotoree.app>" # 인증된 도메인의 주소. 받는 메일함은 없다(답장은 support@)

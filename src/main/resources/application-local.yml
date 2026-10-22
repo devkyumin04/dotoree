@@ -1,3 +1,6 @@
 logging:
   level:
     com.kyumin.dotoree.mapper: DEBUG
+dotoree:
+  mail:
+    sender: log # 로컬은 메일을 보내지 않고 STS 콘솔에 인증 코드를 찍는다 (ADR-068)

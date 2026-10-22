@@ -11,9 +11,11 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -23,10 +25,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.jayway.jsonpath.JsonPath;
+import com.kyumin.dotoree.domain.User;
+import com.kyumin.dotoree.mapper.UserMapper;
 
 // 셸 QA(qa/test-*.sh) → JUnit 통합 테스트 번역의 공통 부품 — _lib.sh 의 login · req · jnum 자리
 // 진짜 DB(CI build 잡의 MySQL, 로컬은 맥 MySQL)를 쓰고 @Transactional 이라 테스트마다 되돌린다 → 계정도 테스트 안에서 가입해 쓴다(QA 의 test@test.com 전제가 없다)
-@SpringBootTest
+// 메일은 보내지 않는다 — RecordingEmailSender 가 받아 두고 테스트가 거기서 인증 코드를 꺼낸다 (ADR-068)
+@SpringBootTest(properties = "dotoree.mail.sender=log")
+@Import(RecordingEmailSender.class)
 @Transactional
 public abstract class IntegrationTestSupport {
 
@@ -39,6 +45,15 @@ public abstract class IntegrationTestSupport {
 	@Autowired
 	private WebApplicationContext context;
 
+	@Autowired
+	protected RecordingEmailSender mailbox;
+
+	@Autowired
+	private JdbcTemplate supportJdbcTemplate;
+
+	@Autowired
+	private UserMapper supportUserMapper;
+
 	protected MockMvc mockMvc;
 
 	@BeforeEach
@@ -50,16 +65,63 @@ public abstract class IntegrationTestSupport {
 				.build();
 	}
 
-	// 가입 → 로그인 → Access 토큰. 가입하면 '미분류' 지출·수입이 같이 생긴다(UserService)
+	// 가입 → Access 토큰. 가입하면 바로 로그인된다(ADR-068) · '미분류' 지출·수입과 '현금' 계좌가 같이 생긴다(UserService)
 	protected String signupAndLogin(String email) throws Exception {
-		String credentials = """
-				{"email":"%s","password":"%s","nickname":"dotoree"}
-				""".formatted(email, PASSWORD);
-		mockMvc.perform(post("/api/users/signup").contentType(MediaType.APPLICATION_JSON).content(credentials))
-				.andExpect(status().isCreated());
-		ResultActions login = mockMvc.perform(post("/api/users/login").contentType(MediaType.APPLICATION_JSON).content(credentials))
-				.andExpect(status().isOk());
-		return read(login, "$.accessToken");
+		return read(signupRequest(email).andExpect(status().isCreated()), "$.accessToken");
+	}
+
+	// ── 가입 · 인증 코드 부품 (ADR-068) ─────────────────
+
+	// 코드 받기(204) → 테스트 메일함에서 코드. purpose "S" 가입 · "P" 비밀번호 재설정
+	protected String emailCode(String email, String purpose) throws Exception {
+		mailbox.clear(email);
+		mockMvc.perform(post("/api/auth/email-codes").contentType(MediaType.APPLICATION_JSON)
+				.content(emailCodeBody(email, purpose)))
+				.andExpect(status().isNoContent());
+		return mailbox.lastCode(email);
+	}
+
+	protected static String emailCodeBody(String email, String purpose) {
+		return "{\"email\":\"" + email + "\",\"purpose\":\"" + purpose + "\"}";
+	}
+
+	protected static String signupBody(String email, String code) {
+		return """
+				{"email":"%s","code":"%s","password":"%s","nickname":"dotoree"}
+				""".formatted(email, code, PASSWORD);
+	}
+
+	// 가입 코드를 받아 바로 가입 요청 — 기대 상태는 부르는 쪽이 본다
+	protected ResultActions signupRequest(String email) throws Exception {
+		String code = emailCode(email, "S");
+		return mockMvc.perform(post("/api/users/signup").contentType(MediaType.APPLICATION_JSON).content(signupBody(email, code)));
+	}
+
+	// 가입(201) → 사용자 번호
+	protected Integer signup(String email) throws Exception {
+		return read(signupRequest(email).andExpect(status().isCreated()), "$.userNum");
+	}
+
+	// 커밋된 계정 지우기 — 테스트 트랜잭션을 끈 클래스(NOT_SUPPORTED)가 앞뒤로 부른다. 파기(UserService.purgeUser)와 같은 FK 순서, 상태('A'·'W') 상관없이
+	// 인증 코드 줄은 계정이 없어도 지운다 — 남으면 다음 실행이 60초 · 24시간 5번에 걸린다
+	protected void deleteCommittedAccount(String email) {
+		supportJdbcTemplate.update("DELETE FROM auth_verifications WHERE email = ?", email);
+		User user = supportUserMapper.findByEmail(email);
+		if (user == null) {
+			return;
+		}
+		Integer target = user.getUserNum();
+		supportUserMapper.deleteOccurrencesOf(target);
+		supportUserMapper.deleteRecurringRulesOf(target);
+		supportUserMapper.deleteTransactionsOf(target);
+		supportUserMapper.deleteTransfersOf(target);
+		supportUserMapper.deleteAdjustmentsOf(target);
+		supportUserMapper.deleteAccountsOf(target);
+		supportUserMapper.deleteChildCategoriesOf(target);
+		supportUserMapper.deleteCategoriesOf(target);
+		supportUserMapper.deleteRefreshTokensOf(target);
+		// deleteUser 는 'W'(탈퇴 유예) 계정만 지운다(파기 안전장치) — 활성 계정도 지워야 해서 여기만 직접
+		supportJdbcTemplate.update("DELETE FROM users WHERE user_num = ?", target);
 	}
 
 	// 토큰을 실은 요청 — body 가 null 이면 본문 없이

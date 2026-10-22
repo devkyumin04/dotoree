@@ -159,4 +159,12 @@ public class RefreshTokenService {
 	public void revokeAllOfUser(Integer userNum) {
 		refreshTokenMapper.revokeAllOfUser(userNum, LocalDateTime.now(clock));
 	}
+
+	// 정리 — 만료된 줄 삭제(AuthCleanupScheduler, ADR-068). 지운 줄 수
+	// 만료된 카드는 어차피 재발급이 안 된다(위 refresh 의 만료 검사). 감수 — 만료 뒤 지워진 옛 카드가 다시 오면 재사용 탐지 대신 그냥 401(못 찾음)이다.
+	// 그 일행의 최신 카드는 늦어도 14일 뒤 같이 만료되고, 만료된 지 오래된 카드의 재사용은 도둑질 신호로 약하다
+	@Transactional
+	public int deleteExpired() {
+		return refreshTokenMapper.deleteExpiredBefore(LocalDateTime.now(clock));
+	}
 }

@@ -22,8 +22,13 @@ class SignupRequestDtoTest {
 	}
 
 	private static SignupRequestDto signup(String email, String password, String nickname) {
+		return signup(email, "012345", password, nickname);
+	}
+
+	private static SignupRequestDto signup(String email, String code, String password, String nickname) {
 		SignupRequestDto dto = new SignupRequestDto();
 		dto.setEmail(email);
+		dto.setCode(code);
 		dto.setPassword(password);
 		dto.setNickname(nickname);
 		return dto;
@@ -71,5 +76,13 @@ class SignupRequestDtoTest {
 	@Test
 	void 닉네임이_공백뿐이면_거절한다() {
 		assertThat(rejectedFields(signup("a@test.com", "Qarace12!", "  "))).containsExactly("nickname");
+	}
+
+	// 인증 코드 (ADR-068) — 숫자 6자리만. 앞자리 0 도 6자리로 온다(위 기본값 012345)
+	@Test
+	void 인증_코드가_6자리_숫자가_아니면_거절한다() {
+		assertThat(rejectedFields(signup("a@test.com", "12345", "Qarace12!", "dotoree"))).containsExactly("code");
+		assertThat(rejectedFields(signup("a@test.com", "12345a", "Qarace12!", "dotoree"))).containsExactly("code");
+		assertThat(rejectedFields(signup("a@test.com", null, "Qarace12!", "dotoree"))).containsExactly("code");
 	}
 }

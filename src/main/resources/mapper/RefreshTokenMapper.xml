@@ -53,4 +53,10 @@
 		  AND revoked_yn = 'N'
 	</update>
 
+	<!-- 정리 (ADR-068) — 만료된 줄은 재발급에 못 쓴다. 매일 AuthCleanupScheduler -->
+	<delete id="deleteExpiredBefore">
+		DELETE FROM refresh_tokens
+		WHERE expires_at &lt; #{before}
+	</delete>
+
 </mapper>

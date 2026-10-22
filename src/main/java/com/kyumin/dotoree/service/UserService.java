@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kyumin.dotoree.domain.AuthVerification;
 import com.kyumin.dotoree.domain.PersonalCategory;
 import com.kyumin.dotoree.domain.User;
 import com.kyumin.dotoree.dto.LoginRequestDto;
@@ -17,8 +18,8 @@ import com.kyumin.dotoree.dto.LoginResult;
 import com.kyumin.dotoree.dto.NicknameRequestDto;
 import com.kyumin.dotoree.dto.PasswordChangeRequestDto;
 import com.kyumin.dotoree.dto.PasswordConfirmRequestDto;
+import com.kyumin.dotoree.dto.PasswordResetRequestDto;
 import com.kyumin.dotoree.dto.SignupRequestDto;
-import com.kyumin.dotoree.dto.SignupResponseDto;
 import com.kyumin.dotoree.dto.UserInfoResponseDto;
 import com.kyumin.dotoree.exception.BusinessException;
 import com.kyumin.dotoree.exception.ErrorCode;
@@ -39,18 +40,24 @@ public class UserService {
 	private final RefreshTokenService refreshTokenService;
 	private final LoginAttemptService loginAttemptService;
 	private final AccountService accountService;
+	private final EmailVerificationService emailVerificationService;
 	private final Clock clock;
 
 	private static final int MAX_FAIL_COUNT = 5;
 	private static final int LOCK_MINUTES = 30;
+	// 가입 = 코드 확인 + 계정 만들기 + 로그인, 한 트랜잭션 (ADR-068). 거절(가입된 주소 · 코드) → 암호화 → 계정 · 기본 카테고리 · 기본 계좌 → 토큰
+	// 코드는 메일로 받은 것 — 확인과 계정 만들기가 한 요청이라 "확인만 되고 가입은 안 된" 상태가 없다. 가입하면 바로 로그인(로그인과 같은 issueLogin)
     @Transactional
-    public SignupResponseDto signup(SignupRequestDto requestDto) {
+    public LoginResult signup(SignupRequestDto requestDto) {
 
         User existingUser = userMapper.findByEmail(requestDto.getEmail());
 
         if (existingUser != null) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
+
+		// 틀리면 400 — 틀린 횟수는 따로 커밋돼 남는다(EmailCodeAttemptService). 암호화(일부러 느림)는 이 거절 뒤에
+		emailVerificationService.verifyAndUse(requestDto.getEmail(), AuthVerification.PURPOSE_SIGNUP, requestDto.getCode());
 
         String encodedPassword = passwordEncoder.encode(requestDto.getPassword());
         
@@ -71,12 +78,8 @@ public class UserService {
         createDefaultCategory(newUser.getUserNum(), "E");
         createDefaultCategory(newUser.getUserNum(), "I");
         accountService.createDefaultAccount(newUser.getUserNum());
-        
-        return new SignupResponseDto(
-    	    newUser.getUserNum(),
-    	    newUser.getUserEmail(),
-    	    newUser.getUserNickname()
-    	);
+
+		return issueLogin(newUser, LocalDateTime.now(clock));
     }
     
     private void createDefaultCategory(Integer userNum, String categoryType) {
@@ -135,22 +138,27 @@ public class UserService {
 
 		userMapper.resetLoginFail(loginUser.getUserNum());
 
-        userMapper.updateLastLoginAt(loginUser.getUserNum(), now);
-        String rawRefreshToken = refreshTokenService.issueNewFamily(loginUser.getUserNum());
-        
-		String accessToken = jwtTokenProvider.createAccessToken(loginUser.getUserNum());
+		return issueLogin(loginUser, now);
+    }
+
+	// 로그인 처리 — 마지막 로그인 시각 · 새 Refresh(새 일행) · Access. 로그인과 가입(바로 로그인)이 같이 쓴다 (ADR-068)
+	// 한 곳에 둔 이유 — 둘이 따로 있으면 한쪽만 고쳐져(예: 쿠키 속성 · 일행 규칙) 가입 직후 세션만 다르게 동작한다
+	private LoginResult issueLogin(User user, LocalDateTime now) {
+		userMapper.updateLastLoginAt(user.getUserNum(), now);
+		String rawRefreshToken = refreshTokenService.issueNewFamily(user.getUserNum());
+		String accessToken = jwtTokenProvider.createAccessToken(user.getUserNum());
 
 		return new LoginResult(
-				new LoginResponseDto(loginUser.getUserNum(), loginUser.getUserEmail(), loginUser.getUserNickname(),
-						accessToken),
+				new LoginResponseDto(user.getUserNum(), user.getUserEmail(), user.getUserNickname(), accessToken),
 				rawRefreshToken
-        );
-    }
+		);
+	}
 
 	private String buildLockedMessage(LocalDateTime lockedUntil, LocalDateTime now) {
 		long remainingSeconds = Duration.between(now, lockedUntil).toSeconds();
 		long remainingMinutes = (long) Math.ceil(remainingSeconds / 60.0);
-		return "로그인 " + MAX_FAIL_COUNT + "회 실패로 계정이 잠겼습니다. " + remainingMinutes + "분 뒤 다시 시도해 주세요.";
+		// 기다리지 않고 풀 길도 알린다 — 비밀번호 재설정이 잠금을 푼다 (ADR-057 · 068)
+		return "로그인 " + MAX_FAIL_COUNT + "회 실패로 계정이 잠겼습니다. " + remainingMinutes + "분 뒤 다시 시도하거나, 비밀번호를 재설정하면 바로 풀립니다.";
 	}
 
     // ── 마이페이지 ─────────────────────────────────────
@@ -194,6 +202,31 @@ public class UserService {
 		refreshTokenService.revokeAllOfUser(userNum);
 	}
 
+	// 비밀번호 재설정 — 로그인 못 하는 사람이 메일 코드로 새 비번을 정한다 (ADR-068). 한 트랜잭션
+	// 거절(코드) → 암호화 → 비번 + 로그인 잠금 풀기 → 전 세션 폐기. 끝나면 새 비번으로 로그인(바로 로그인은 안 한다 — 결정은 가입만)
+	// 잠금도 푼다 — 잠긴 주인이 30분을 기다리지 않고 풀 수단 (ADR-057). 전 세션 폐기는 비번 변경과 같은 이유(누가 쓰는 것 같아서 바꾸는 경우)
+	// 탈퇴 유예('W') 계정도 바꾼다 — 비번을 잊은 채 탈퇴했으면 새 비번으로 로그인해 탈퇴를 취소할 수 있어야 한다(ADR-052)
+	@Transactional
+	public void resetPassword(PasswordResetRequestDto requestDto) {
+		User user = userMapper.findByEmail(requestDto.getEmail());
+
+		// 없는 주소 — 코드를 보낸 적도 없다(sendCode 가 건너뜀). 코드 문제와 같은 문구로
+		if (user == null) {
+			throw new BusinessException(ErrorCode.EMAIL_CODE_EXPIRED);
+		}
+
+		emailVerificationService.verifyAndUse(requestDto.getEmail(), AuthVerification.PURPOSE_PASSWORD_RESET, requestDto.getCode());
+
+		String encodedPassword = passwordEncoder.encode(requestDto.getNewPassword());
+
+		// 0행 = 확인과 UPDATE 사이에 파기된 계정
+		if (userMapper.resetPassword(user.getUserNum(), encodedPassword) == 0) {
+			throw new BusinessException(ErrorCode.EMAIL_CODE_EXPIRED);
+		}
+
+		refreshTokenService.revokeAllOfUser(user.getUserNum());
+	}
+
 	// 탈퇴 = 논리적 삭제 + 유예 시작. 30일 뒤 purgeUser 가 물리적으로 지운다 (ADR-052)
 	// 감수 — 이미 발급된 액세스 토큰은 만료(15분)까지 유효하다. 필터가 매 요청 DB 를 보지 않기 때문(stateless JWT).
 	//        그 사이 쓴 데이터도 유예가 끝나면 같이 지워진다
@@ -231,6 +264,7 @@ public class UserService {
 		userMapper.deleteChildCategoriesOf(userNum);
 		userMapper.deleteCategoriesOf(userNum);
 		userMapper.deleteRefreshTokensOf(userNum);
+		userMapper.deleteVerificationsOf(userNum);
 		userMapper.deleteUser(userNum);
 		return true;
 	}
