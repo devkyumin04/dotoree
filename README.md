@@ -70,6 +70,14 @@ flowchart LR
 - 화면과 API 를 한 프로세스가 서빙합니다(별도 프론트 서버 없음). 계산·판단은 서버, 화면은 표시만 합니다.
 - `main` 에 push 하면 **JUnit 단위·통합 테스트 200여 개**가 일회용 MySQL 에서 돌고, 그 빌드의 jar 를 한 번 띄워 헬스 200 을 확인한 뒤 배포합니다. 하나라도 실패하면 배포되지 않습니다.
 
+<details>
+<summary><b>ERD</b> — 지금 쓰는 표 11개 + 쓸 예정 3개(receipt_analysis · merchant_profiles · ai_usage_logs)</summary>
+
+<img src="docs/images/erd.png" alt="ERD — 회원 · 인증, 계좌 · 거래 · 이체 · 잔액 보정 · 반복 규칙, 예정된 영수증 분석 · 상호명 임베딩 · AI 호출 기록">
+
+계좌에 잔액 칸이 없는 것이 핵심입니다 — 잔액은 거래 · 이체 · 보정에서 계산합니다(ADR-065).
+</details>
+
 - **Backend** — Java 17, Spring Boot 4, Spring Security, JWT(jjwt), MyBatis, MySQL 8.4, Flyway
 - **Frontend** — Vanilla JavaScript(ES6+), HTML5/CSS3, Fetch API
 - **Infra** — AWS EC2(ARM t4g) 한 대에 앱 + MySQL, Nginx + Let's Encrypt, S3(백업·메일함), SES, SNS, Route 53 헬스 체크, CloudWatch, GitHub Actions(OIDC), Cloudflare DNS
