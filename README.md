@@ -5,9 +5,11 @@
 🔗 **https://dotoree.app** (가입해서 바로 써 볼 수 있습니다)
 
 <p>
-  <img src="docs/images/transactions.png" alt="거래 화면 — 월별 수입·지출·잔액과 거래 목록" width="360">
-  <img src="docs/images/statistics.png" alt="통계 화면 — 카테고리 봉투와 수입 대비 지출" width="360">
+  <img src="docs/images/transactions.png" alt="가계부 화면 — 월별 수입 · 지출 · 이번 달 증감, 거래마다 계좌, 계좌 사이 이체는 회색" width="360">
+  <img src="docs/images/accounts.png" alt="계좌 화면 — 순자산, 마이너스통장 한도, 반복 예정으로 계산한 예상 잔액과 모자라는 날" width="360">
 </p>
+
+<sub>실제 한 달(2026-10) 거래 내역을 옮겨 넣은 화면입니다(가게는 브랜드만, 사람 이름은 메모로 바꿈).</sub>
 
 ---
 
