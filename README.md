@@ -71,7 +71,7 @@ flowchart LR
 - `main` 에 push 하면 **JUnit 단위·통합 테스트 200여 개**가 일회용 MySQL 에서 돌고, 그 빌드의 jar 를 한 번 띄워 헬스 200 을 확인한 뒤 배포합니다. 하나라도 실패하면 배포되지 않습니다.
 
 <details>
-<summary><b>ERD</b> — 지금 쓰는 표 11개 + 쓸 예정 3개(receipt_analysis · merchant_profiles · ai_usage_logs)</summary>
+<summary><b>ERD</b> — 지금 쓰는 표 10개 + 쓸 예정 3개(receipt_analysis · merchant_profiles · ai_usage_logs)</summary>
 
 <img src="docs/images/erd.png" alt="ERD — 회원 · 인증, 계좌 · 거래 · 이체 · 잔액 보정 · 반복 규칙, 예정된 영수증 분석 · 상호명 임베딩 · AI 호출 기록">
 
