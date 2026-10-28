@@ -112,7 +112,6 @@ function createItem(t) {
         <span class="trans-amount ${amountClass}">${sign}${won(t.transAmount)}</span>
         <span class="actions">
             <button data-action="edit" data-kind="trans" data-id="${t.transNum}">수정</button>
-            <button data-action="delete" data-kind="trans" data-id="${t.transNum}">삭제</button>
         </span>
     `;
     return li;
@@ -129,7 +128,6 @@ function createTransferItem(r) {
         <span class="trans-amount">${won(r.transferAmount)}</span>
         <span class="actions">
             <button data-action="edit" data-kind="transfer" data-id="${r.transferNum}">수정</button>
-            <button data-action="delete" data-kind="transfer" data-id="${r.transferNum}">삭제</button>
         </span>
     `;
     return li;
@@ -256,6 +254,10 @@ document.getElementById('nextMonth').addEventListener('click', () => changeMonth
 document.getElementById('addBtn').addEventListener('click', () => openModal(null));
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 
+// 삭제는 목록이 아니라 수정 창 안에 둔다 — 줄마다 수정 옆에 붙어 있으면 잘못 누르기 쉽다(10/28)
+const deleteBtn = document.getElementById('deleteBtn');
+deleteBtn.addEventListener('click', () => { if (editing) removeItem(editing); });
+
 listEl.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
@@ -297,6 +299,7 @@ function openModal(target) {
     fillAccountOptions(t);
 
     document.getElementById('modalTitle').textContent = r ? '이체 수정' : (t ? '거래 수정' : '추가');
+    deleteBtn.hidden = !target;
 
     if (t) {
         document.getElementById('categoryNum').value = t.categoryNum;
@@ -445,6 +448,7 @@ async function removeItem(target) {
     }
     try {
         await apiRequest(url, 'DELETE');
+        closeModal();
         await loadTransactions();
     } catch (error) {
         if (isStale(error)) return handleStale(error);
