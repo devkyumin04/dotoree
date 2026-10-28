@@ -63,7 +63,12 @@ function renderNetWorth(worth, accounts, isThisMonth) {
 function renderEnvelopes(listId, emptyId, list) {
     const listEl = document.getElementById(listId);
     listEl.innerHTML = '';
-    list.forEach(p => listEl.appendChild(createEnvelope(p)));
+    // 금액 큰 순 — 어디에 가장 많이 썼는지 한눈에 (표시 순서일 뿐 계산은 서버). 소분류도 같은 순서
+    const byAmountDesc = (a, b) => b.amount - a.amount;
+    [...list].sort(byAmountDesc).forEach(p => {
+        p.children = [...p.children].sort(byAmountDesc);
+        listEl.appendChild(createEnvelope(p));
+    });
     document.getElementById(emptyId).hidden = list.length > 0;
 }
 

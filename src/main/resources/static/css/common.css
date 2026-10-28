@@ -324,3 +324,16 @@ a {
 /* 계좌 화면 예상 잔액 — 모자란 계좌는 빨간 글씨 + 그날 */
 .forecast-title { font-size: 1rem; margin: 24px 0 8px; }
 .forecast-item .shortage { color: var(--expense); font-size: .85rem; }
+
+/* 목록 위 주 버튼(+ 추가 · + 계좌 추가 · + 반복 추가) — 브라우저 기본 회색 작은 버튼이라 눈에 안 띄었다 */
+#addBtn { display: block; margin: 8px 0 16px; padding: 12px 20px; background: var(--accent); color: var(--accent-text); font-size: 16px; font-weight: 700; }
+
+/* 줄 끝 버튼은 아래 줄로 — 오른쪽에 붙이면 계좌 이름 칸이 좁아져 이름이 중간에서 끊겼다(10/28).
+   이름은 띄어쓰기에서만 줄을 바꾼다 */
+.transaction-item, .account-item { flex-wrap: wrap; }
+.transaction-item .actions, .account-item .actions { flex: 0 0 100%; display: flex; justify-content: flex-end; gap: 8px; }
+.trans-memo, .account-name { word-break: keep-all; }
+.transaction-item .trans-account { white-space: nowrap; }
+
+/* 삭제(되돌릴 수 없는 버튼) — 수정 창 맨 아래, 빨간 글씨로 따로 */
+.btn-danger { background: transparent; color: var(--expense); border: 1px solid var(--expense); margin-top: 8px; }
