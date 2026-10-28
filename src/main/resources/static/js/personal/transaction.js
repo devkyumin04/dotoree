@@ -279,9 +279,17 @@ function setModalType(type) {
     modal.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.type === type));
     const isTransfer = type === 'T';
     document.getElementById('transactionFields').hidden = isTransfer;
+    updateAccountField();
     document.getElementById('transferFields').hidden = !isTransfer;
     document.getElementById('categoryNum').required = !isTransfer;
     if (!isTransfer) fillCategoryOptions();
+}
+
+// 계좌 칸은 고를 계좌가 둘 이상일 때만(거래만 — 이체는 보내는 · 받는 계좌가 따로 있다).
+// 수정하는 거래가 닫힌 계좌면 "(닫힘)" 선택지가 하나 더 있어 칸이 보인다. 값은 숨겨도 그대로 전송된다
+function updateAccountField() {
+    document.getElementById('accountField').hidden =
+        modalType === 'T' || document.getElementById('accountNum').options.length <= 1;
 }
 
 function openModal(target) {
@@ -297,6 +305,9 @@ function openModal(target) {
 
     setModalType(r ? 'T' : (t ? t.transType : 'E'));
     fillAccountOptions(t);
+    updateAccountField();
+    // 이체는 계좌가 둘 이상이어야 쓸 수 있다. 이미 있는 이체를 고칠 땐 항상 보인다
+    modal.querySelector('.tab[data-type="T"]').hidden = accounts.length < 2 && !r;
 
     document.getElementById('modalTitle').textContent = r ? '이체 수정' : (t ? '거래 수정' : '추가');
     deleteBtn.hidden = !target;
