@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kyumin.dotoree.dto.EmailCodeRequestDto;
+import com.kyumin.dotoree.dto.LoginResponseDto;
+import com.kyumin.dotoree.dto.LoginResult;
 import com.kyumin.dotoree.dto.PasswordResetRequestDto;
 import com.kyumin.dotoree.dto.RefreshResponseDto;
 import com.kyumin.dotoree.dto.RefreshResult;
@@ -45,6 +47,15 @@ public class AuthController {
 				.body(new RefreshResponseDto(refreshResult.getAccessToken()));
 	}
 	
+	// 데모로 둘러보기 — 로그인과 같은 응답(Refresh 쿠키 + 본문의 Access). 비밀번호를 받지 않는다 (UserService.demoLogin)
+	@PostMapping("/demo-login")
+	public ResponseEntity<LoginResponseDto> demoLogin() {
+		LoginResult loginResult = userService.demoLogin();
+		ResponseCookie cookie = refreshCookieProvider.create(loginResult.getRawRefreshToken());
+		return ResponseEntity.status(HttpStatus.OK).header(HttpHeaders.SET_COOKIE, cookie.toString())
+				.body(loginResult.getLoginResponse());
+	}
+
 	// 로그아웃 — 장부에서 일행 폐기(서비스) → 지우는 쿠키(Max-Age=0, 같은 이름·경로) + 204. 실패하지 않는다(쿠키 없음·장부에 없음도 204)
 	// 서비스가 예외면 쿠키는 안 나간다(return 줄까지 못 감) — 장부가 살아 있는데 쿠키만 지우면 다시 폐기할 방법이 사라지므로 이 순서가 맞다
 	@PostMapping("/logout")

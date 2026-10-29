@@ -25,3 +25,18 @@ form.addEventListener('submit', async (e) => {
         }
     });
 });
+
+// 데모로 둘러보기 — 비밀번호 없이 읽기 전용 데모 계정으로 들어간다(서버: POST /api/auth/demo-login). 쓰기는 서버가 막는다
+const demoBtn = document.getElementById('demoBtn');
+demoBtn.addEventListener('click', async () => {
+    localStorage.removeItem('accessToken');
+    await withButtonLock(demoBtn, async () => {
+        try {
+            const result = await apiRequest('/api/auth/demo-login', 'POST');
+            localStorage.setItem('accessToken', result.accessToken);
+            window.location.href = '/views/personal/personal-main.html';
+        } catch (error) {
+            resultMessage.textContent = error.message;
+        }
+    });
+});

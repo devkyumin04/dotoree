@@ -12,6 +12,7 @@ import java.util.HexFormat;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kyumin.dotoree.config.DemoAccount;
 import com.kyumin.dotoree.domain.AuthVerification;
 import com.kyumin.dotoree.dto.EmailCodeRequestDto;
 import com.kyumin.dotoree.exception.BusinessException;
@@ -43,6 +44,7 @@ public class EmailVerificationService {
 	private final EmailCodeAttemptService emailCodeAttemptService;
 	private final UserMapper userMapper;
 	private final EmailSender emailSender;
+	private final DemoAccount demoAccount;
 	private final Clock clock;
 
 	// 코드 받기 — 거절(가입된 주소 · 60초 · 24시간 5번) → 줄 남기기(해시만) → 메일. 한 트랜잭션
@@ -53,7 +55,8 @@ public class EmailVerificationService {
 		String email = requestDto.getEmail();
 		String purpose = requestDto.getPurpose();
 
-		boolean registered = userMapper.findByEmail(email) != null;
+		// 데모 계정은 받는 사람이 없는 주소 — 재설정 코드를 보내지 않는다(없는 주소와 같이 성공처럼 204)
+		boolean registered = userMapper.findByEmail(email) != null && !demoAccount.isDemo(email);
 		if (AuthVerification.PURPOSE_SIGNUP.equals(purpose) && registered) {
 			// 가입 409 는 원래 있던 것과 같다 — 코드를 받기 전에 알려 메일을 헛되이 보내지 않는다
 			throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);

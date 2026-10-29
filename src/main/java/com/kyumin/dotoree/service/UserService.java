@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kyumin.dotoree.config.DemoAccount;
 import com.kyumin.dotoree.domain.AuthVerification;
 import com.kyumin.dotoree.domain.PersonalCategory;
 import com.kyumin.dotoree.domain.User;
@@ -41,6 +42,7 @@ public class UserService {
 	private final LoginAttemptService loginAttemptService;
 	private final AccountService accountService;
 	private final EmailVerificationService emailVerificationService;
+	private final DemoAccount demoAccount;
 	private final Clock clock;
 
 	private static final int MAX_FAIL_COUNT = 5;
@@ -140,6 +142,19 @@ public class UserService {
 
 		return issueLogin(loginUser, now);
     }
+
+	// 데모로 둘러보기 — 비밀번호 없이 데모 계정으로 로그인한다. 이 계정은 비밀번호로는 못 들어온다(아무도 모르는 값). 쓰기는 DemoGuardFilter 가 막는다
+	// 꺼져 있거나(설정 없음) 계정이 없으면 404 — 운영에 데모 계정을 만들기 전에는 버튼이 눌려도 이 답이 온다
+	@Transactional
+	public LoginResult demoLogin() {
+		User demoUser = demoAccount.isEnabled() ? userMapper.findByEmail(demoAccount.email()) : null;
+
+		if (demoUser == null || !"A".equals(demoUser.getUserStatus())) {
+			throw new BusinessException(ErrorCode.DEMO_NOT_AVAILABLE);
+		}
+
+		return issueLogin(demoUser, LocalDateTime.now(clock));
+	}
 
 	// 로그인 처리 — 마지막 로그인 시각 · 새 Refresh(새 일행) · Access. 로그인과 가입(바로 로그인)이 같이 쓴다 (ADR-068)
 	// 한 곳에 둔 이유 — 둘이 따로 있으면 한쪽만 고쳐져(예: 쿠키 속성 · 일행 규칙) 가입 직후 세션만 다르게 동작한다

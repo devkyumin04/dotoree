@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.kyumin.dotoree.security.DemoGuardFilter;
 import com.kyumin.dotoree.security.JwtAuthenticationFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,9 +20,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
+	private final DemoGuardFilter demoGuardFilter;
 	
-	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, DemoGuardFilter demoGuardFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.demoGuardFilter = demoGuardFilter;
     }
 	
     @Bean
@@ -67,7 +70,9 @@ public class SecurityConfig {
                 .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // 로그인 번호가 정해진 뒤에 — 데모 계정이면 쓰기를 막는다
+            .addFilterAfter(demoGuardFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
