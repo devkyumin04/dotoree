@@ -1,6 +1,5 @@
 package com.kyumin.dotoree.domain;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -21,9 +20,6 @@ public class PersonalTransaction {
 	private LocalDate transDate;
 	private String transMemo;
 	private String placeName;
-	private BigDecimal latitude;
-	private BigDecimal longitude;
-	private String captureImgUrl;
 	private String aiAnalyzedYn;
 	private Integer version;
 	private String useYn;

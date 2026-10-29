@@ -32,8 +32,8 @@ DELETE FROM auth_verifications    WHERE email = @EMAIL;
 DELETE FROM users                 WHERE user_num = @OLD;
 
 -- ── 2) 계정
-INSERT INTO users (user_pw, user_nickname, user_email, user_status, book_open_yn)
-VALUES (@PW, '데모', @EMAIL, 'A', 'N');
+INSERT INTO users (user_pw, user_nickname, user_email, user_status)
+VALUES (@PW, '데모', @EMAIL, 'A');
 SET @U = LAST_INSERT_ID();
 
 -- ── 3) 계좌 — 현금(기본) · 월급통장 · 비상금 · 신용카드. 시작 날짜는 거래가 시작되기 전날
