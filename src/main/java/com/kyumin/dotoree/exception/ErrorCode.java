@@ -62,6 +62,8 @@ public enum ErrorCode {
 	TRANSFER_ACCESS_DENIED(HttpStatus.FORBIDDEN, "본인의 이체내역만 사용할 수 있습니다."),
 	ADJUSTMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "본인의 잔액 보정만 사용할 수 있습니다."),
 	RECURRING_ACCESS_DENIED(HttpStatus.FORBIDDEN, "본인의 반복만 사용할 수 있습니다."),
+	// 데모 계정 — 둘러보기만 된다. 문구가 JSON 에 그대로 들어가므로(DemoGuardFilter) 큰따옴표를 쓰지 않는다
+	DEMO_READ_ONLY(HttpStatus.FORBIDDEN, "데모 계정은 보기만 할 수 있어요. 직접 써 보려면 회원가입해 주세요."),
 
 	// ── 404 — 찾는 것이 없다
 	CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 카테고리입니다."),
@@ -70,6 +72,7 @@ public enum ErrorCode {
 	TRANSFER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 이체내역입니다."),
 	ADJUSTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 잔액 보정입니다."),
 	RECURRING_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 반복입니다."),
+	DEMO_NOT_AVAILABLE(HttpStatus.NOT_FOUND, "지금은 데모 계정을 쓸 수 없습니다."),
 
 	// ── 409 — 지금 상태와 부딪힌다
 	DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
