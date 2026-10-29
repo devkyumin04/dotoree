@@ -4,14 +4,15 @@
 
 - **기간 · 인원** — 2026.08 ~ 진행 중 · 1인(기획 · 설계 · 개발 · 배포 · 운영)
 - **스택** — Java 17 · Spring Boot 4 · Spring Security · MyBatis · MySQL 8.4 · AWS(EC2 · S3 · SES · Route 53 · CloudWatch) · GitHub Actions
-- **서비스** — 🔗 **https://dotoree.app** (가입 — 이메일 인증 코드 — 후 써 볼 수 있습니다)
+- **서비스** — 🔗 **https://dotoree.app** (가입 — 이메일 인증 코드 — 후 써 볼 수 있습니다. 가입 없이 보려면 로그인 화면의 **"데모로 둘러보기"** — 읽기 전용)
 
 <p>
   <img src="docs/images/transactions.png" alt="가계부 화면 — 월별 수입 · 지출 · 이번 달 증감, 거래마다 계좌, 계좌 사이 이체는 회색" width="360">
-  <img src="docs/images/accounts.png" alt="계좌 화면 — 순자산, 마이너스통장 한도, 반복 예정으로 계산한 예상 잔액과 모자라는 날" width="360">
+  <img src="docs/images/accounts.png" alt="계좌 화면 — 순자산과 계좌별 잔액(현금 · 통장 · 카드), 잔액 맞추기 · 수정 · 닫기" width="360">
+  <img src="docs/images/statistics.png" alt="통계 화면 — 월별 수입 · 지출 · 저축률, 카테고리별 비중(식비는 소분류로 펼침), 6개월 추이와 월말 순자산" width="360">
 </p>
 
-<sub>실제 한 달(2026-10) 거래 내역을 옮겨 넣은 화면입니다(가게는 브랜드만, 사람 이름은 메모로 바꿈).</sub>
+<sub>가계부 화면은 실제 한 달(2026-10) 거래 내역을 옮겨 넣은 것입니다(가게는 브랜드만, 사람 이름은 메모로 바꿈). 계좌 · 통계 화면은 데모 계정의 예시 데이터입니다.</sub>
 
 ---
 
