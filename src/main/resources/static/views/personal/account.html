@@ -19,22 +19,16 @@
             <a href="/views/personal/statistics.html">통계</a>
         </nav>
 
+        <!-- 예상 잔액 경고 (욕조 ② — ADR-067) — 지금 잔액 + 남은 예정(밀린 것 포함)을 다음 달 말까지 봤을 때 모자라는 계좌만. 계산은 서버 -->
+        <div id="forecastWarning" class="forecast-warning" hidden></div>
+
         <!-- 순자산 = 계좌 잔액의 합(카드·마통의 마이너스도 더한다). 계산은 서버 한 곳 (ADR-065) -->
         <div class="summary">
             <span>순자산 <small>(갚을 돈을 뺀 내 돈)</small> <b id="totalBalance">0</b></span>
-            <span>전날 대비 <b id="balanceChange">0</b></span>
         </div>
 
         <button id="addBtn">+ 계좌 추가</button>
         <ul id="accountList"></ul>
-
-        <!-- 예상 잔액 (욕조 ② — ADR-067) — 지금 잔액 + 남은 예정(밀린 것 포함)을 다음 달 말까지. 계산은 서버 -->
-        <h2 class="forecast-title">예상 잔액 <small id="forecastUntil"></small></h2>
-        <div class="summary">
-            <span>예상 순자산 <b id="forecastTotal">0</b></span>
-        </div>
-        <ul id="forecastList"></ul>
-        <p class="form-hint" id="forecastEmpty" hidden>월세 · 월급처럼 정해진 돈을 <a class="inline-link" href="/views/personal/recurring.html">반복</a>에 적어 두면 다음 달 말까지 계좌별로 얼마 남는지, 어느 날 모자라는지 미리 보여요.</p>
     </div>
 
     <!-- 모달 -->

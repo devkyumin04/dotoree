@@ -1,6 +1,6 @@
 requireLogin();
 
-// 계좌 화면 — 순자산 · 전날 대비 · 계좌 목록 · 추가/수정/닫기 (ADR-065)
+// 계좌 화면 — 순자산 · 계좌 목록 · 추가/수정/닫기 (ADR-065)
 // 잔액 · 순자산은 전부 서버 값 그대로(계산 없음, ADR-038)
 let accounts = [];
 let rules = [];          // 반복 — 닫을 때 "이 계좌를 쓰는 반복도 같이 끝낼까요?" (ADR-067)
@@ -32,29 +32,20 @@ async function loadAccounts() {
     accounts = list;
     rules = ruleList;
     render(summary);
-    renderForecast(forecast);
+    renderForecastWarning(forecast);
 }
 
-// 예상 잔액 — 계좌마다 다음 달 말 잔액, 모자라는 계좌는 "11-01 −200,000 모자람"
-function renderForecast(f) {
-    document.getElementById('forecastUntil').textContent = `(${f.untilDate.slice(5).replace('-', '/')}까지)`;
-    document.getElementById('forecastTotal').textContent = won(f.forecastTotal);
-    const listEl2 = document.getElementById('forecastList');
-    listEl2.innerHTML = '';
-    document.getElementById('forecastEmpty').hidden = rules.length > 0;
-    if (rules.length === 0) return;
-    f.accounts.forEach(a => {
-        const li = document.createElement('li');
-        li.className = 'account-item forecast-item';
-        // 처음 모자라는 날 = 미리 채워 둘 날. 가장 낮은 금액은 괄호로
-        const warn = a.shortage
-            ? `<small class="shortage">${a.shortageDate.slice(5)}부터 모자람 (최저 ${won(a.lowestBalance)})</small>`
-            : '';
-        li.innerHTML = `
-            <span class="account-name">${escapeHtml(a.accountName)} ${warn}</span>
-            <span class="account-balance ${a.forecastBalance < 0 ? 'amount-expense' : ''}">${won(a.forecastBalance)}</span>
-        `;
-        listEl2.appendChild(li);
+// 예상 잔액은 모자랄 때만 화면 맨 위에 경고 한 줄(10/28) — 계좌마다 "11/12부터 모자라요 (최저 −2,510,700)".
+// 모자라는 계좌가 없거나 반복이 하나도 없으면 아무것도 안 보인다. 계산은 서버, 여기선 표시만
+function renderForecastWarning(f) {
+    const box = document.getElementById('forecastWarning');
+    box.innerHTML = '';
+    const short = rules.length === 0 ? [] : f.accounts.filter(a => a.shortage);
+    box.hidden = short.length === 0;
+    short.forEach(a => {
+        const p = document.createElement('p');
+        p.textContent = `⚠ ${a.accountName} ${a.shortageDate.slice(5).replace('-', '/')}부터 모자라요 (최저 ${won(a.lowestBalance)})`;
+        box.appendChild(p);
     });
 }
 
@@ -65,8 +56,6 @@ function rulesUsing(accountNum) {
 
 function render(summary) {
     document.getElementById('totalBalance').textContent = won(summary.totalBalance);
-    const change = summary.change;
-    document.getElementById('balanceChange').textContent = (change > 0 ? '+' : '') + won(change);
 
     listEl.innerHTML = '';
     accounts.forEach(a => listEl.appendChild(createItem(a)));
