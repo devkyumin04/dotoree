@@ -19,6 +19,17 @@
             <a href="/views/personal/settings.html">설정</a>
         </nav>
 
+        <!-- 처음 쓰는 사람 — 카테고리가 "미분류"뿐이면 자주 쓰는 카테고리를 한 번에 만들어 준다(10/29). 아니면 숨김 -->
+        <section id="starterCard" class="starter-card" hidden>
+            <p><b>처음이시네요!</b> 자주 쓰는 카테고리를 만들어 둘까요?</p>
+            <p class="form-hint">지출 — 식비 · 교통 · 쇼핑 · 생활 · 문화/여가 / 수입 — 월급 · 용돈. 나중에 카테고리 화면에서 고칠 수 있어요.</p>
+            <div class="starter-actions">
+                <button type="button" id="starterCreateBtn">만들기</button>
+                <button type="button" id="starterLaterBtn">나중에</button>
+            </div>
+            <p id="starterMessage" class="result-message"></p>
+        </section>
+
         <!-- 월 선택 -->
         <div class="month-nav">
             <button type="button" id="prevMonth">◀</button>

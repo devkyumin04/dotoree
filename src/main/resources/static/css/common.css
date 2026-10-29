@@ -342,3 +342,8 @@ a {
 .settings-list { list-style: none; padding: 0; margin: 0; }
 .settings-list a, .settings-list button { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; padding: 16px 12px; border: none; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; color: var(--text); font-size: 1rem; text-align: left; text-decoration: none; }
 .settings-list small { opacity: .7; font-weight: normal; }
+
+/* 처음 쓰는 사람 카드 — 카테고리가 미분류뿐일 때만 가계부 맨 위에(10/29) */
+.starter-card { margin: 0 0 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.starter-card p { margin: 0 0 6px; }
+.starter-actions { display: flex; gap: 8px; margin-top: 10px; }
