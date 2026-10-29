@@ -219,8 +219,14 @@ document.getElementById('starterCreateBtn').addEventListener('click', async () =
             }
         } catch (error) {
             starterMessage.textContent = error.message;
+            await loadTransactions();
+            return;
         }
         await loadTransactions();
+        // 카드가 사라지므로 끝났다는 걸 카드 밖 한 줄로 알린다
+        const done = document.getElementById('starterDone');
+        done.textContent = `✓ 카테고리 ${STARTER_CATEGORIES.length}개를 만들었어요. 거래를 추가할 때 고를 수 있어요.`;
+        done.hidden = false;
     });
 });
 
@@ -340,7 +346,12 @@ function updateAccountField() {
         modalType === 'T' || document.getElementById('accountNum').options.length <= 1;
 }
 
+// 카테고리를 안 고르고 저장하려 하면 한 번 알려 준다(통계에서 분류가 안 보이므로). 같은 상태로 한 번 더 누르면 저장
+let uncategorizedWarned = false;
+document.getElementById('categoryNum').addEventListener('change', () => { uncategorizedWarned = false; });
+
 function openModal(target) {
+    uncategorizedWarned = false;
     form.reset();
     resultMessage.textContent = '';
     editing = target;
@@ -478,6 +489,16 @@ form.addEventListener('submit', async (e) => {
         const t = editing ? transactions.find(x => x.transNum === editing.num) : null;
         url = t ? `/api/transactions/${t.transNum}?version=${t.version}` : '/api/transactions';
         method = t ? 'PUT' : 'POST';
+    }
+
+    // 추가할 때만 — 고를 카테고리가 있는데 "미분류" 그대로면 한 번 묻는다
+    if (modalType !== 'T' && !editing && !uncategorizedWarned) {
+        const picked = categories.find(c => c.categoryNum === body.categoryNum);
+        if (picked && picked.isDefault && categories.some(c => !c.isDefault && c.categoryType === picked.categoryType)) {
+            uncategorizedWarned = true;
+            resultMessage.textContent = '카테고리를 고르면 통계에서 나눠 볼 수 있어요. 그대로 저장하려면 저장을 한 번 더 누르세요.';
+            return;
+        }
     }
 
     await withButtonLock(document.getElementById('submitBtn'), async () => {
