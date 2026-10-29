@@ -28,7 +28,8 @@ form.addEventListener('submit', async (e) => {
         try {
             const result = await apiRequest('/api/users/signup', 'POST', { email, code, password, nickname });
             localStorage.setItem('accessToken', result.accessToken);
-            window.location.href = '/views/main.html';
+            // 가입한 사람은 곧장 가계부로 — 메인에서 한 번 더 누르게 하지 않는다
+            window.location.href = '/views/personal/personal-main.html';
         } catch (error) {
             // 코드가 틀려도 비번 · 닉네임은 그대로 둔다 — 코드 칸만 고치면 된다
             resultMessage.textContent = error.message;
