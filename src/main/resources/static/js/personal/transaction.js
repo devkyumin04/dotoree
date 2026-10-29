@@ -91,6 +91,7 @@ function render() {
     pending.forEach(p => pendingList.appendChild(createPendingItem(p)));
     pendingSection.hidden = pending.length === 0;
     emptyEl.hidden = rows.length > 0;
+    renderStarterCard();
 
     // 월 이동·저장·삭제 모두 render() 를 거치므로 여기 한 줄이면 전부 갱신된다
     const extras = [
@@ -175,6 +176,53 @@ function createPendingItem(p) {
     `;
     return li;
 }
+
+// ───── 처음 쓰는 사람 — 카테고리 한 번에 만들기
+// 카드는 카테고리가 "미분류"(서버가 isDefault 로 알려 줌)뿐일 때만 뜬다. "나중에"는 이 브라우저에만 기억(막혀도 카드가 또 뜰 뿐)
+const STARTER_DISMISSED_KEY = 'starterCardDismissed';
+const STARTER_CATEGORIES = [
+    ['E', '식비', '🍚'], ['E', '교통', '🚌'], ['E', '쇼핑', '🛍️'], ['E', '생활', '🏠'], ['E', '문화/여가', '🎬'],
+    ['I', '월급', '💰'], ['I', '용돈', '🎁'],
+];
+const starterCard = document.getElementById('starterCard');
+const starterMessage = document.getElementById('starterMessage');
+
+function isStarterDismissed() {
+    try {
+        return localStorage.getItem(STARTER_DISMISSED_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
+
+function renderStarterCard() {
+    const onlyDefault = categories.length > 0 && categories.every(c => c.isDefault);
+    starterCard.hidden = !onlyDefault || isStarterDismissed();
+}
+
+document.getElementById('starterLaterBtn').addEventListener('click', () => {
+    try {
+        localStorage.setItem(STARTER_DISMISSED_KEY, '1');
+    } catch {
+        // 못 남겨도 다음에 카드가 또 뜰 뿐이다
+    }
+    starterCard.hidden = true;
+});
+
+// 하나씩 순서대로 만든다(서버가 이름 · 종류를 검사). 중간에 실패하면 거기서 멈추고 메시지 — 만든 것은 남고 카드는 사라진다(미분류뿐이 아니라서)
+document.getElementById('starterCreateBtn').addEventListener('click', async () => {
+    await withButtonLock(document.getElementById('starterCreateBtn'), async () => {
+        starterMessage.textContent = '';
+        try {
+            for (const [categoryType, categoryName, categoryEmoji] of STARTER_CATEGORIES) {
+                await apiRequest('/api/categories', 'POST', { categoryName, categoryEmoji, categoryType, parentCategoryNum: null });
+            }
+        } catch (error) {
+            starterMessage.textContent = error.message;
+        }
+        await loadTransactions();
+    });
+});
 
 // ───── 예정 확인 · 건너뛰기 (ADR-067)
 const pendingSection = document.getElementById('pendingSection');
