@@ -337,3 +337,8 @@ a {
 
 /* 삭제(되돌릴 수 없는 버튼) — 수정 창 맨 아래, 빨간 글씨로 따로 */
 .btn-danger { background: transparent; color: var(--expense); border: 1px solid var(--expense); margin-top: 8px; }
+
+/* 설정 화면 — 큰 줄 네 개(반복 · 카테고리 · 마이페이지 · 로그아웃). 드롭다운 대신 한 번에 보이는 목록(10/29) */
+.settings-list { list-style: none; padding: 0; margin: 0; }
+.settings-list a, .settings-list button { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; padding: 16px 12px; border: none; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; color: var(--text); font-size: 1rem; text-align: left; text-decoration: none; }
+.settings-list small { opacity: .7; font-weight: normal; }

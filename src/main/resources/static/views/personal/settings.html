@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>설정</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <script src="/js/util/theme.js"></script>
+</head>
+<body>
+    <div class="page-container">
+        <a href="/views/main.html" class="inline-link">← 메인</a>
+        <h1>설정</h1>
+        <nav class="sub-nav">
+            <a href="/views/personal/personal-main.html">가계부</a>
+            <a href="/views/personal/account.html">계좌</a>
+            <a href="/views/personal/statistics.html">통계</a>
+            <a href="/views/personal/settings.html" class="active">설정</a>
+        </nav>
+
+        <!-- 자주 안 쓰는 것을 한 곳에 — 탭은 가계부 · 계좌 · 통계 셋만 눈에 보이게(10/29) -->
+        <ul class="settings-list">
+            <li><a href="/views/personal/recurring.html">반복 <small>월세 · 월급처럼 정해진 돈</small></a></li>
+            <li><a href="/views/personal/category.html">카테고리 <small>지출 · 수입 분류</small></a></li>
+            <li><a href="/views/user/mypage.html">마이페이지 <small>닉네임 · 비밀번호 · 탈퇴</small></a></li>
+            <li><button id="logoutBtn" type="button">로그아웃</button></li>
+        </ul>
+    </div>
+
+    <script src="/js/util/authGuard.js"></script>
+    <script src="/js/util/apiClient.js"></script>
+    <script src="/js/personal/settings.js"></script>
+</body>
+</html>
