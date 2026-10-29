@@ -125,6 +125,7 @@ function openModal(id) {
         document.getElementById('openingDate').required = true;
     }
     applyType();
+    document.getElementById('accountMore').open = !!a;   // 추가할 땐 접고, 수정할 땐 펼친다
     modal.hidden = false;
 }
 

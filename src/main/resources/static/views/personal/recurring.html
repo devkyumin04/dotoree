@@ -61,9 +61,13 @@
                 </label>
                 <p class="form-hint">31일을 고르면 30일까지인 달엔 30일, 2월엔 28·29일에 떠요. 주말이어도 그날 그대로 떠요.</p>
 
-                <label>시작 날짜 <input type="date" id="startDate" required></label>
-                <label>끝 날짜 (할부면 마지막 달, 비우면 계속) <input type="date" id="endDate"></label>
-                <label>메모 <input type="text" id="ruleMemo" maxlength="100"></label>
+                <!-- 시작 날짜 · 끝 날짜 · 메모는 "더 보기"로 접는다(10/29). 시작 날짜는 오늘이 기본값이라 접어 둬도 비지 않는다. 수정할 땐 펼쳐 둔다 -->
+                <details id="ruleMore" class="more-fields">
+                    <summary>더 보기 <small>시작 날짜 · 끝 날짜 · 메모</small></summary>
+                    <label>시작 날짜 <input type="date" id="startDate" required></label>
+                    <label>끝 날짜 (할부면 마지막 달, 비우면 계속) <input type="date" id="endDate"></label>
+                    <label>메모 <input type="text" id="ruleMemo" maxlength="100"></label>
+                </details>
 
                 <button type="submit" id="submitBtn">저장</button>
                 <button type="button" id="cancelBtn">취소</button>

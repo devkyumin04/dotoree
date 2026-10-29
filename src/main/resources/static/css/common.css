@@ -347,3 +347,7 @@ a {
 .starter-card { margin: 0 0 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
 .starter-card p { margin: 0 0 6px; }
 .starter-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+/* "더 보기"로 접는 입력 칸(계좌 · 반복 추가 창, 10/29) */
+.more-fields > summary { cursor: pointer; margin: 8px 0; }
+.more-fields > summary small { opacity: .7; margin-left: 6px; }
