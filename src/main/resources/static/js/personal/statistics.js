@@ -7,25 +7,16 @@ let month = now.getMonth() + 1;
 const monthLabel = document.getElementById('monthLabel');
 
 // ───── 조회
-// 통계(수입·지출) + 순자산(계좌) — 서로 결과가 필요 없어 동시에 (ADR-040). 계산은 전부 서버
+// 통계(수입·지출) + 월말 순자산 추이 — 서로 결과가 필요 없어 동시에 (ADR-040). 계산은 전부 서버
+// 지금 순자산 · 계좌별 잔액은 계좌 화면에서 본다(같은 숫자가 두 곳에 있으면 헷갈린다, 10/28)
 async function loadStatistics() {
-    const isThisMonth = year === now.getFullYear() && month === now.getMonth() + 1;
-    const [data, worth, monthly, accounts] = await Promise.all([
+    const [data, monthly] = await Promise.all([
         apiRequest(`/api/statistics?year=${year}&month=${month}`, 'GET'),
-        apiRequest(`/api/accounts/summary?date=${netWorthDate(isThisMonth)}`, 'GET'),
         apiRequest(`/api/accounts/monthly?year=${year}&month=${month}`, 'GET'),
-        isThisMonth ? apiRequest('/api/accounts', 'GET') : Promise.resolve([]),
     ]);
-    if (!data || !worth || !monthly || !accounts) return;
+    if (!data || !monthly) return;
     render(data);
-    renderNetWorth(worth, accounts, isThisMonth);
     renderTrend(data.monthlyList, monthly);
-}
-
-// 순자산 기준일 — 이번 달이면 오늘, 지난 달이면 그달 말일 (날짜 고르기는 표시 기준일 뿐, 합계는 서버)
-function netWorthDate(isThisMonth) {
-    const d = isThisMonth ? now : new Date(year, month, 0);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // ───── 그리기 — 계산 없이 표시만 (ADR-038). 합계·비율·잔액 전부 서버 값
@@ -40,24 +31,6 @@ function render(s) {
 
     renderEnvelopes('expenseList', 'expenseEmpty', s.expenseList);
     renderEnvelopes('incomeList', 'incomeEmpty', s.incomeList);
-}
-
-function renderNetWorth(worth, accounts, isThisMonth) {
-    document.getElementById('netWorthDate').textContent = isThisMonth ? '오늘' : `${worth.date.slice(5)} 기준`;
-    document.getElementById('netWorth').textContent = won(worth.totalBalance);
-    document.getElementById('netWorthChange').textContent = (worth.change > 0 ? '+' : '') + won(worth.change);
-
-    const listEl = document.getElementById('accountBalances');
-    listEl.innerHTML = '';
-    accounts.forEach(a => {
-        const div = document.createElement('div');
-        div.className = 'stat-item';
-        div.innerHTML = `
-            <span class="stat-name">${escapeHtml(a.accountName)}</span>
-            <span class="stat-amount ${a.balance < 0 ? 'amount-expense' : ''}">${won(a.balance)}</span>
-        `;
-        listEl.appendChild(div);
-    });
 }
 
 function renderEnvelopes(listId, emptyId, list) {
