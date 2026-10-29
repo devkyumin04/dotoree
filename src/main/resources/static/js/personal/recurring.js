@@ -154,6 +154,7 @@ function openModal(id) {
         document.getElementById('startDate').value = todayString();
     }
     applyRepeatType();
+    document.getElementById('ruleMore').open = !!r;   // 추가할 땐 접고, 수정할 땐 펼친다
     modal.hidden = false;
 }
 

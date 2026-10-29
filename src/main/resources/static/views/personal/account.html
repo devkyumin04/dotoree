@@ -46,11 +46,15 @@
                 </label>
                 <!-- 시작 잔액 = 시작 날짜 기준 잔액. 그 날짜 이후 거래만 잔액에 더한다(지난 거래를 채워도 두 번 안 셈) -->
                 <label>시작 잔액 <input type="number" id="openingBalance" min="-1000000000000" max="1000000000000" required></label>
-                <label>시작 날짜 <input type="date" id="openingDate" required></label>
-                <!-- 한도 — 마이너스통장·카드만. 시작 잔액은 −한도까지 -->
-                <label id="creditLimitField" hidden>한도 (비워도 됨)
-                    <input type="number" id="creditLimit" min="1" max="1000000000000">
-                </label>
+                <!-- 시작 날짜 · 한도는 거의 안 바꾸니 "더 보기"로 접는다(10/29). 시작 날짜는 오늘이 기본값이라 접어 둬도 비지 않는다. 수정할 땐 펼쳐 둔다 -->
+                <details id="accountMore" class="more-fields">
+                    <summary>더 보기 <small>시작 날짜 · 한도</small></summary>
+                    <label>시작 날짜 <input type="date" id="openingDate" required></label>
+                    <!-- 한도 — 마이너스통장·카드만. 시작 잔액은 −한도까지 -->
+                    <label id="creditLimitField" hidden>한도 (비워도 됨)
+                        <input type="number" id="creditLimit" min="1" max="1000000000000">
+                    </label>
+                </details>
                 <p class="form-hint" id="typeHint"></p>
                 <button type="submit" id="submitBtn">저장</button>
                 <button type="button" id="cancelBtn">취소</button>
