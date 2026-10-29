@@ -16,18 +16,13 @@ public class User {
     public static final int WITHDRAW_GRACE_DAYS = 30;
 
     private Integer userNum;
-    private String userId;
     private String userPw;
     private String userNickname;
     private String userEmail;
-    private String userPhone;
-    private String userBirth;
     private String userStatus;
     private LocalDateTime userWithdrawnAt;
     private Integer loginFailCount;
     private LocalDateTime lockedUntil;
-    private String bookOpenYn;
-    private String signupIp;
     private LocalDateTime userCreatedAt;
     private LocalDateTime userLastLoginAt;
 

@@ -68,7 +68,6 @@ public class UserService {
         newUser.setUserPw(encodedPassword);
         newUser.setUserNickname(requestDto.getNickname());
         newUser.setUserStatus("A");
-        newUser.setBookOpenYn("N");
         newUser.setLoginFailCount(0);
         
 		try {
