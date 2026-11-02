@@ -30,8 +30,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
-	// PATCH 일부수정 / PUT 전체수정 / GET 조회 / POST 등록 / DELETE 삭제
-
 	private final RefreshTokenService refreshTokenService;
 	private final RefreshCookieProvider refreshCookieProvider;
 	private final EmailVerificationService emailVerificationService;

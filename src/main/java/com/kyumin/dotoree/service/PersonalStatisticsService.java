@@ -43,18 +43,7 @@ public class PersonalStatisticsService {
 
 	private final PersonalStatisticsMapper personalStatisticsMapper;
 
-	/*
-	 * 봉투(대분류)의 이름표. 번호·이름·이모지만 담는 값 묶음.
-	 *
-	 * record 는 자바 16+ 문법으로, 아래 한 줄이 이것들을 자동으로 만들어준다
-	 *   - final 필드 3개
-	 *   - 생성자        new ParentInfo(71, "식비", "(이모지)")
-	 *   - 읽기 메서드   info.num() / info.name() / info.emoji()   <- get 접두사가 없다
-	 *   - equals / hashCode / toString
-	 *
-	 * 값만 담고 절대 안 바뀌므로 불변인 record 가 알맞다.
-	 * 이 서비스 안에서만 쓰므로 별도 파일 없이 중첩 선언.
-	 */
+	// 봉투(대분류)의 이름표 — 번호 · 이름 · 이모지만 담는 불변 값(record). 이 서비스 안에서만 써서 중첩 선언
 	private record ParentInfo(Integer num, String name, String emoji) {}
 
 	/*
@@ -87,48 +76,32 @@ public class PersonalStatisticsService {
 		long totalAmount = filteredRows.stream()
 							.mapToLong(row -> row.getAmount())
 							.sum();
-		// -- 준비물 두 개 ------------------------------------------
-		//
-		// childrenMap : 대분류번호 -> 그 봉투에 들어갈 줄들
-		//   예) 71 -> [식비 줄, 닭가슴살 줄, 프로틴 줄]
+		// 대분류번호 -> 그 봉투에 들어갈 줄들
 		Map<Integer, List<CategoryStatRowDto>> childrenMap = new LinkedHashMap<>();
-		//
-		// parentInfoMap : 대분류번호 -> 그 봉투의 이름표
-		//   예) 71 -> ParentInfo(71, "식비", "(이모지)")
-		//   왜 따로 기억하냐면, 급여(76)처럼 직접 거래가 없는 대분류는
-		//   집계 결과에 자기 줄이 아예 없다. 자식 줄이 물고 온 정보로 채워야 한다
+		// 대분류번호 -> 그 봉투의 이름표. 따로 기억하는 이유 — 급여(76)처럼 직접 거래가 없는 대분류는
+		// 집계 결과에 자기 줄이 아예 없어서, 자식 줄이 물고 온 정보로 채워야 한다
 		Map<Integer, ParentInfo> parentInfoMap = new LinkedHashMap<>();
 
-		// -- 한 줄씩 훑으면서 두 맵에 담는다 ------------------------
 		for (CategoryStatRowDto row : filteredRows) {
 
-			// 이 줄이 '어느 봉투에 속하는지' 를 담을 변수 셋.
-			// if 블록 밖에서 선언해야 블록이 끝난 뒤에도 쓸 수 있다
 			Integer parentNum;    // 봉투 번호
 			String parentName;    // 봉투 이름
 			String parentEmoji;   // 봉투 이모지
 
 			if (row.getParentCategoryNum() == null) {
-				// - 대분류 줄 (부모가 없다)
-				//   예) 식비 줄 : categoryNum=71, categoryName="식비", parentCategoryName=null
-				//   자기가 곧 봉투이므로 '자기 필드' 를 읽는다
+				// 대분류 줄 — 자기가 곧 봉투라 자기 필드를 읽는다
 				parentNum = row.getCategoryNum();
 				parentName = row.getCategoryName();
 				parentEmoji = row.getCategoryEmoji();
 			} else {
-				// - 소분류 줄 (부모가 있다)
-				//   예) 닭가슴살 줄 : categoryNum=78, parentCategoryNum=71, parentCategoryName="식비"
-				//   봉투는 내 부모이므로 'parent 필드' 를 읽는다
+				// 소분류 줄 — 봉투는 내 부모라 parent 필드를 읽는다
 				parentNum = row.getParentCategoryNum();
 				parentName = row.getParentCategoryName();
 				parentEmoji = row.getParentCategoryEmoji();
 			}
 
-			// 이 줄을 해당 봉투에 담는다.
-			// 봉투가 아직 없으면 빈 리스트를 만들어 넣고, 어쨌든 그 리스트를 받아 add
 			childrenMap.computeIfAbsent(parentNum, k -> new ArrayList<>()).add(row);
 
-			// 봉투 이름표를 기억한다. 이미 있으면 덮어쓰지 않는다
 			parentInfoMap.putIfAbsent(parentNum , new ParentInfo(parentNum, parentName, parentEmoji));
 		}
 		
