@@ -14,24 +14,17 @@ import lombok.Setter;
 public class Account {
 
 	public static final String DEFAULT_ACCOUNT_NAME = "현금";
-	public static final String TYPE_CASH = "C";
-	public static final String TYPE_BANK = "B";
 
 	private Integer accountNum;
 	private Integer userNum;
 	private String accountName;
-	private String accountType;
+	private AccountType accountType;
 	private Long openingBalance;
 	private Long creditLimit;
 	private LocalDate openingDate;
 	private String isDefaultYn;
 	private String useYn;
 	private LocalDateTime createdAt;
-
-	// 마이너스가 될 수 있는 계좌인가 — 현금 · 통장은 아니다(마이너스통장 · 카드만)
-	public static boolean canBeNegative(String accountType) {
-		return !TYPE_CASH.equals(accountType) && !TYPE_BANK.equals(accountType);
-	}
 
 	public boolean isOpen() {
 		return "Y".equals(useYn);

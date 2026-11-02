@@ -18,7 +18,7 @@ public class PersonalCategory {
 	private Integer parentCategoryNum;
 	private String categoryName;
 	private String categoryEmoji;
-	private String categoryType;
+	private CategoryType categoryType;
 	private String isDefaultYn;
 	private String useYn;
 	private LocalDateTime createdAt;

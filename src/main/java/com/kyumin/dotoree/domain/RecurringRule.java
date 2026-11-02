@@ -17,9 +17,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class RecurringRule {
 
-	public static final String MONTHLY = "M";
-	public static final String YEARLY = "Y";
-
 	private Integer ruleNum;
 	private Integer userNum;
 	private Integer categoryNum;
@@ -28,7 +25,7 @@ public class RecurringRule {
 	private Integer toAccountNum;
 	private Long ruleAmount;
 	private String ruleMemo;
-	private String repeatType;
+	private RepeatType repeatType;
 	private Integer repeatMonth;
 	private Integer repeatDay;
 	private LocalDate startDate;
@@ -49,7 +46,7 @@ public class RecurringRule {
 			return dates;
 		}
 		for (YearMonth ym = YearMonth.from(first); !ym.isAfter(YearMonth.from(last)); ym = ym.plusMonths(1)) {
-			if (YEARLY.equals(repeatType) && ym.getMonthValue() != repeatMonth) {
+			if (repeatType == RepeatType.YEARLY && ym.getMonthValue() != repeatMonth) {
 				continue;
 			}
 			LocalDate date = dateIn(ym);

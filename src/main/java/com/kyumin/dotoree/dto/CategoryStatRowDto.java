@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.dto;
 
+import com.kyumin.dotoree.domain.CategoryType;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,5 +16,5 @@ public class CategoryStatRowDto {
 	private String  parentCategoryName;
 	private String  parentCategoryEmoji;
 	private Long amount;
-	private String categoryType;
+	private CategoryType categoryType;
 }

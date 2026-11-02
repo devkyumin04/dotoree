@@ -40,7 +40,7 @@
 - **해결** — 서버는 S3 에 넣기만 하고(읽기 · 삭제 권한 없음), 잘린 덤프를 흉내 내 완료 검사를 실측, 별도 DB 에 복원 리허설. 백업이 실패하거나 끊기면 CloudWatch 경보
 - **결과** — 서버가 털려도 지난 백업은 지울 수 없고, 복원이 되는 것까지 확인한 백업만 남는다
 
-**그 밖에** — GitHub 에 장기 키 없이 OIDC 1시간 임시 자격 · 배포할 때만 22번 포트 열기([ADR-042](docs/decisions.md), [048](docs/decisions.md)) · 새 마이그레이션은 이전 jar 로 롤백해도 돌아가게([ADR-053](docs/decisions.md)) · 반복 예정은 `(rule_num, scheduled_date)` UNIQUE 로 두 번 눌러도 거래 한 줄([ADR-067](docs/decisions.md)) · 문의 메일도 국내(SES 서울 → S3)에 보관([ADR-056](docs/decisions.md))
+**그 밖에** — GitHub 에 장기 키 없이 OIDC 1시간 임시 자격 · 배포할 때만 22번 포트 열기([ADR-042](docs/decisions.md), [048](docs/decisions.md)) · 새 마이그레이션은 이전 jar 로 롤백해도 돌아가게([ADR-053](docs/decisions.md)) · 반복 예정은 `(rule_num, scheduled_date)` UNIQUE 로 두 번 눌러도 거래 한 줄([ADR-067](docs/decisions.md)) · 문의 메일도 국내(SES 서울 → S3)에 보관([ADR-056](docs/decisions.md)) · 상태값 `'A'` · `'W'` 는 enum 으로 읽고, DB 컬럼은 그대로라 마이그레이션 없이([ADR-073](docs/decisions.md))
 
 ## 지금 동작하는 것
 
@@ -96,7 +96,7 @@ flowchart LR
 
 > 지금은 **Sprint 1(개인 가계부 + 계좌 · 잔액 + 인증 + 배포·운영)** 단계입니다. 영수증·결제내역 캡처 AI 분석(Sprint 2~3)은 설계를 마치고 순서대로 만들고 있습니다.
 
-- **Sprint 1 마무리** — 화면 다듬기, 실무 표준 정리(PATCH · Swagger · record · enum · ETag), 시각 UTC 저장
+- **Sprint 1 마무리** — 화면 다듬기, 실무 표준 정리(PATCH · Swagger · record · ETag), 시각 UTC 저장
 - **Sprint 2** — Clova OCR, 업로드(사진은 저장하지 않음), 정규식 1차 파싱 + LLM 보완, AI 분석 중 DB 커넥션을 잡지 않는 트랜잭션 분리
 - **Sprint 3** — 상호명 임베딩 검색으로 카테고리·메모 추천, 정확도 전후 비교
 - **Sprint 4** — API 호출 제한(앱 + Nginx), 전체 점검

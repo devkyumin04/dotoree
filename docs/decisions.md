@@ -901,6 +901,18 @@
 - **감수** — 서버에 `PATCH` 를 막는 프록시가 있으면 안 된다(Nginx 는 막지 않는다 — 운영 확인 필요). 주소가 `/me/nickname` 이라 `PUT` 도 틀리지 않다 — 기준은 "한 칸만 보낸다"
 - **진행** — 서버 2줄 · 화면 2줄 · 통합 테스트 메서드 교체. 로드맵 8번 ②
 
+### ADR-073. 한 글자 코드는 enum 으로 — 컬럼은 그대로, MyBatis 핸들러가 변환 (2026-11-02)
+
+- **문제** — 회원 상태(`"A"` · `"W"`) · 수입/지출(`"I"` · `"E"`) · 계좌 종류 · 반복 주기 · 예정 처리가 문자열로 서비스 곳곳에 박혀 있었다. `"W".equals(...)` 는 코드만 봐서는 뜻이 안 읽히고, 오타(`"w"`)는 컴파일이 못 잡아 실행 때 조용히 틀린다
+- **선택**
+  1. **enum 5개** — `UserStatus` · `CategoryType`(거래 종류도 카테고리 종류를 그대로 물려받으므로 같이 쓴다) · `AccountType` · `RepeatType` · `OccurrenceStatus`. 도메인 객체와 서비스는 enum 만 본다. "마이너스가 될 수 있는 계좌인가" 같은 규칙은 enum 메서드(`AccountType.canBeNegative()`)로 옮겼다
+  2. **DB 는 그대로** — 컬럼은 `CHAR(1)`, 값도 `'A'` · `'W'` 그대로. `CodeEnumTypeHandler` 하나를 enum 마다 `MyBatisConfig` 에서 등록해 글자 ↔ enum 을 한 곳에서 바꾼다. MyBatis 기본 `EnumTypeHandler` 는 이름(`"ACTIVE"`)으로 저장하므로 쓰지 않는다
+  3. **요청 · 응답 DTO 는 글자 그대로(String)** — API 가 주고받는 `"E"` · `"B"` 와 `@Pattern` 검증 메시지가 바뀌지 않는다. 서비스가 입구에서 `fromCode` 로 enum 으로 바꾸고, 나갈 때 `getCode()` 로 되돌린다
+  4. **`*_YN` 플래그는 이번에 뺀다** — 둘뿐인 값이라 enum 보다 `boolean` 매핑이 맞는 모양이고, 쓰는 곳이 서비스 · SQL 에 수십 곳이라 따로
+- **근거** — 마이그레이션도 운영 DB 변경도 없고 이전 jar 로 롤백해도 돈다(ADR-053 과 같은 이유). 상태 비교가 `== UserStatus.WITHDRAWN` 으로 읽히고, 없는 코드는 `fromCode` 에서 바로 예외 — 엉뚱한 값이 DB 까지 흘러가지 않는다
+- **감수** — SQL 안의 글자 리터럴(`user_status = 'A'` 등)은 그대로라, 코드 글자를 바꾸려면 enum 과 SQL 을 같이 고쳐야 한다 / 새 코드 enum 은 `MyBatisConfig` 에 한 줄 등록해야 한다(빠뜨리면 첫 INSERT 에서 `Data too long` 으로 드러난다) / DTO 는 여전히 String 이라 enum 경계는 서비스 입구다
+- **진행** — enum 5개 · `CodeEnum` · `CodeEnumTypeHandler` · `MyBatisConfig` · 서비스 · 도메인 치환 · 단위 테스트 `CodeEnumTest`. 로드맵 8번 ⑤
+
 ## 공동 가계부 (폐기)
 
 > **폐기 (2026-10-24)** — 공동 가계부 · 정산을 기획에서 뺐다(로드맵은 개인 가계부 + AI 로 Sprint 4 까지). 아래 ADR-030~032 와, 다른 ADR 안의 "공동 가계부(Sprint 4)" 언급은 그때 계획의 기록으로 남긴다

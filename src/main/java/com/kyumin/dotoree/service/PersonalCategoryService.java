@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 
+import com.kyumin.dotoree.domain.CategoryType;
 import com.kyumin.dotoree.domain.PersonalCategory;
 import com.kyumin.dotoree.dto.CategoryRequestDto;
 import com.kyumin.dotoree.dto.CategoryResponseDto;
@@ -33,14 +34,15 @@ public class PersonalCategoryService {
     	    throw new BusinessException(ErrorCode.RESERVED_CATEGORY_NAME);
     	}
     	
-    	validateParent(userNum, requestDto.getParentCategoryNum(), requestDto.getCategoryType(), null);
+    	CategoryType categoryType = CategoryType.fromCode(requestDto.getCategoryType());
+    	validateParent(userNum, requestDto.getParentCategoryNum(), categoryType, null);
     	  
     	PersonalCategory newPersonalCategory = new PersonalCategory();
     	newPersonalCategory.setUserNum(userNum);
     	newPersonalCategory.setParentCategoryNum(requestDto.getParentCategoryNum());
     	newPersonalCategory.setCategoryName(requestDto.getCategoryName());
     	newPersonalCategory.setCategoryEmoji(requestDto.getCategoryEmoji());
-    	newPersonalCategory.setCategoryType(requestDto.getCategoryType());
+    	newPersonalCategory.setCategoryType(categoryType);
     	newPersonalCategory.setIsDefaultYn("N");
     	newPersonalCategory.setUseYn("Y");
     	personalCategoryMapper.insertCategory(newPersonalCategory);
@@ -54,21 +56,21 @@ public class PersonalCategoryService {
             category.getCategoryNum(),
             category.getCategoryName(),
             category.getCategoryEmoji(),
-            category.getCategoryType(),
+            category.getCategoryType().getCode(),
             category.getParentCategoryNum(),
             "Y".equals(category.getIsDefaultYn()),
             hasChildren
         );
     }
     
-    private void validateParent(Integer userNum, Integer parentNum, String categoryType, Integer selfNum) {
+    private void validateParent(Integer userNum, Integer parentNum, CategoryType categoryType, Integer selfNum) {
         if (parentNum == null) return;                                   // 대분류
         if (selfNum != null && parentNum.equals(selfNum)) throw new BusinessException(ErrorCode.CATEGORY_SELF_PARENT);     // 자기 자신 (조회 전)
 
         PersonalCategory parent = personalCategoryMapper.findByCategoryNum(parentNum);
         if (parent == null) throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
         if (!parent.getUserNum().equals(userNum)) throw new BusinessException(ErrorCode.CATEGORY_ACCESS_DENIED);
-        if (!parent.getCategoryType().equals(categoryType)) throw new BusinessException(ErrorCode.CATEGORY_TYPE_MISMATCH);
+        if (parent.getCategoryType() != categoryType) throw new BusinessException(ErrorCode.CATEGORY_TYPE_MISMATCH);
         if (parent.getParentCategoryNum() != null) throw new BusinessException(ErrorCode.CATEGORY_DEPTH_EXCEEDED);            // 부모가 소분류 → 3계층
         if ("Y".equals(parent.getIsDefaultYn())) throw new BusinessException(ErrorCode.CATEGORY_UNDER_DEFAULT);              // 미분류 아래
     }

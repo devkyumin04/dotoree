@@ -15,7 +15,7 @@ public class PersonalTransaction {
 	private Integer userNum;
 	private Integer categoryNum;
 	private Integer accountNum;
-	private String transType;
+	private CategoryType transType;
 	private Long transAmount;
 	private LocalDate transDate;
 	private String transMemo;
