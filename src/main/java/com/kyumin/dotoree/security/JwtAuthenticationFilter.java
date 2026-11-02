@@ -22,14 +22,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // 1. 헤더에서 토큰 꺼내기
     	String header = request.getHeader("Authorization");
 
     	String token = null;
     	if (header != null && header.startsWith("Bearer ")) {
     	    token = header.substring(7);   // "Bearer " 7글자를 잘라내고 순수 토큰만 남김
     	}
-        // 2. 토큰이 있고, 유효하면
     	if (token != null && jwtTokenProvider.validateToken(token)) {
     	    Integer userNum = jwtTokenProvider.getUserNumFromToken(token);
 
@@ -38,7 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     	    SecurityContextHolder.getContext().setAuthentication(authentication);
     	}
-        // 3. 필터 체인 계속 진행 (이건 항상 마지막에 실행)
+        // 토큰이 없거나 틀려도 그냥 다음으로 — 인증이 필요한 주소를 막는 건 SecurityConfig
         filterChain.doFilter(request, response);
     }
 }

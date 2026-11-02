@@ -22,7 +22,6 @@ public class JwtTokenProvider {
         this.accessTokenExpiration = accessTokenExpiration;
     }
 
-    // 1. 토큰 생성
     public String createAccessToken(Integer userNum) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + accessTokenExpiration.toMillis());
@@ -35,7 +34,6 @@ public class JwtTokenProvider {
                 .compact();                      
     }
 
-    // 2. 토큰에서 userNum 꺼내기 (나중에 필터에서 씀)
     public Integer getUserNumFromToken(String token) {
     	String subject = Jwts.parser()
     	        .verifyWith(secretKey)
@@ -47,7 +45,6 @@ public class JwtTokenProvider {
     	return Integer.valueOf(subject);
     }
 
-    // 3. 토큰 유효성 검증
     public boolean validateToken(String token) {
         try {
             Jwts.parser()
