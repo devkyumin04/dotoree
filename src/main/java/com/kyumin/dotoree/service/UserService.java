@@ -9,6 +9,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kyumin.dotoree.domain.CategoryType;
+import com.kyumin.dotoree.domain.UserStatus;
 import com.kyumin.dotoree.config.DemoAccount;
 import com.kyumin.dotoree.domain.AuthVerification;
 import com.kyumin.dotoree.domain.PersonalCategory;
@@ -67,7 +69,7 @@ public class UserService {
         newUser.setUserEmail(requestDto.getEmail());
         newUser.setUserPw(encodedPassword);
         newUser.setUserNickname(requestDto.getNickname());
-        newUser.setUserStatus("A");
+        newUser.setUserStatus(UserStatus.ACTIVE);
         newUser.setLoginFailCount(0);
         
 		try {
@@ -76,14 +78,14 @@ public class UserService {
 			throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
 		}
         
-        createDefaultCategory(newUser.getUserNum(), "E");
-        createDefaultCategory(newUser.getUserNum(), "I");
+        createDefaultCategory(newUser.getUserNum(), CategoryType.EXPENSE);
+        createDefaultCategory(newUser.getUserNum(), CategoryType.INCOME);
         accountService.createDefaultAccount(newUser.getUserNum());
 
 		return issueLogin(newUser, LocalDateTime.now(clock));
     }
     
-    private void createDefaultCategory(Integer userNum, String categoryType) {
+    private void createDefaultCategory(Integer userNum, CategoryType categoryType) {
     	
     	PersonalCategory category = new PersonalCategory();
         category.setUserNum(userNum);
@@ -129,7 +131,7 @@ public class UserService {
 
 		// 유예 중(파기 전) 탈퇴 계정의 로그인 = 탈퇴 취소 (ADR-052). 비밀번호 확인 뒤에만 복구한다.
 		// 0행이면 그 사이 스케줄러가 파기한 것 — 없는 계정으로 토큰을 내주지 않는다
-		if ("W".equals(loginUser.getUserStatus())) {
+		if (loginUser.getUserStatus() == UserStatus.WITHDRAWN) {
 			int restoredRows = userMapper.restore(loginUser.getUserNum());
 
 			if (restoredRows == 0) {
@@ -148,7 +150,7 @@ public class UserService {
 	public LoginResult demoLogin() {
 		User demoUser = demoAccount.isEnabled() ? userMapper.findByEmail(demoAccount.email()) : null;
 
-		if (demoUser == null || !"A".equals(demoUser.getUserStatus())) {
+		if (demoUser == null || demoUser.getUserStatus() != UserStatus.ACTIVE) {
 			throw new BusinessException(ErrorCode.DEMO_NOT_AVAILABLE);
 		}
 

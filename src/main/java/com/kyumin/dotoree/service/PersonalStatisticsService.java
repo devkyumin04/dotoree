@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 
+import com.kyumin.dotoree.domain.CategoryType;
 import com.kyumin.dotoree.dto.CategoryStatDto;
 import com.kyumin.dotoree.dto.CategoryStatRowDto;
 import com.kyumin.dotoree.dto.MonthlyStatDto;
@@ -65,9 +66,9 @@ public class PersonalStatisticsService {
 	 * 매퍼가 준 줄들(지출·수입 섞임)을 한 타입만 골라 봉투로 묶는다.
 	 * 조회는 밖(getStatistics)에서 한 번만 하고 여기는 받은 리스트만 다룬다 — DB 없이도 테스트할 수 있는 순수 함수.
 	 */
-	private List<CategoryStatDto> buildCategoryStats(List<CategoryStatRowDto> categoryRows, String categoryType) {
+	private List<CategoryStatDto> buildCategoryStats(List<CategoryStatRowDto> categoryRows, CategoryType categoryType) {
 		List<CategoryStatRowDto> filteredRows = categoryRows.stream()
-												.filter(row -> categoryType.equals(row.getCategoryType()))
+												.filter(row -> categoryType == row.getCategoryType())
 												.toList();
 		
 		// 해당 타입 전체 합계. 봉투 비율의 분모가 된다.
@@ -189,8 +190,8 @@ public class PersonalStatisticsService {
 		LocalDate endDate = startDate.plusMonths(1);
 		List<CategoryStatRowDto> categoryRows = personalStatisticsMapper.findCategoryStats(userNum, startDate, endDate);
 
-		List<CategoryStatDto> expenseList = buildCategoryStats(categoryRows, "E");
-		List<CategoryStatDto> incomeList = buildCategoryStats(categoryRows, "I");
+		List<CategoryStatDto> expenseList = buildCategoryStats(categoryRows, CategoryType.EXPENSE);
+		List<CategoryStatDto> incomeList = buildCategoryStats(categoryRows, CategoryType.INCOME);
 		List<MonthlyStatDto> monthlyList = getMonthlyStats(userNum, year, month);
 	
 		long totalExpense = expenseList.stream().mapToLong(CategoryStatDto::getAmount).sum();

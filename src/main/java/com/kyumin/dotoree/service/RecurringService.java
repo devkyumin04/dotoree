@@ -16,6 +16,9 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kyumin.dotoree.domain.RepeatType;
+import com.kyumin.dotoree.domain.OccurrenceStatus;
+import com.kyumin.dotoree.domain.AccountType;
 import com.kyumin.dotoree.domain.Account;
 import com.kyumin.dotoree.domain.PersonalCategory;
 import com.kyumin.dotoree.domain.RecurringOccurrence;
@@ -139,7 +142,7 @@ public class RecurringService {
 				: (scheduled.isAfter(today) ? today : scheduled);
 		long amount = requestDto.getAmount() != null ? requestDto.getAmount() : rule.getRuleAmount();
 
-		RecurringOccurrence occurrence = newOccurrence(userNum, rule, scheduled, RecurringOccurrence.CONFIRMED);
+		RecurringOccurrence occurrence = newOccurrence(userNum, rule, scheduled, OccurrenceStatus.CONFIRMED);
 		if (rule.isTransfer()) {
 			TransferRequestDto transfer = new TransferRequestDto();
 			transfer.setFromAccountNum(rule.getFromAccountNum());
@@ -166,7 +169,7 @@ public class RecurringService {
 		RecurringRule rule = findOwnedRule(userNum, ruleNum);
 		validateOpenOccurrence(userNum, rule, requestDto.getScheduledDate());
 
-		RecurringOccurrence occurrence = newOccurrence(userNum, rule, requestDto.getScheduledDate(), RecurringOccurrence.SKIPPED);
+		RecurringOccurrence occurrence = newOccurrence(userNum, rule, requestDto.getScheduledDate(), OccurrenceStatus.SKIPPED);
 		insertOccurrence(occurrence);
 		return toResponse(occurrence);
 	}
@@ -279,9 +282,9 @@ public class RecurringService {
 	private static void applySchedule(RecurringRule rule, RecurringRuleRequestDto requestDto) {
 		rule.setRuleAmount(requestDto.getRuleAmount());
 		rule.setRuleMemo(requestDto.getRuleMemo());
-		rule.setRepeatType(requestDto.getRepeatType());
+		rule.setRepeatType(RepeatType.fromCode(requestDto.getRepeatType()));
 		rule.setRepeatDay(requestDto.getRepeatDay());
-		if (RecurringRule.YEARLY.equals(requestDto.getRepeatType())) {
+		if (rule.getRepeatType() == RepeatType.YEARLY) {
 			if (requestDto.getRepeatMonth() == null) {
 				throw new BusinessException(ErrorCode.RECURRING_MONTH_REQUIRED);
 			}
@@ -347,7 +350,7 @@ public class RecurringService {
 		return ruleNum + ":" + date;
 	}
 
-	private static RecurringOccurrence newOccurrence(Integer userNum, RecurringRule rule, LocalDate scheduled, String status) {
+	private static RecurringOccurrence newOccurrence(Integer userNum, RecurringRule rule, LocalDate scheduled, OccurrenceStatus status) {
 		RecurringOccurrence occurrence = new RecurringOccurrence();
 		occurrence.setRuleNum(rule.getRuleNum());
 		occurrence.setUserNum(userNum);
@@ -357,7 +360,7 @@ public class RecurringService {
 	}
 
 	private static OccurrenceResponseDto toResponse(RecurringOccurrence o) {
-		return new OccurrenceResponseDto(o.getRuleNum(), o.getScheduledDate(), o.getOccurrenceStatus(), o.getTransNum(), o.getTransferNum());
+		return new OccurrenceResponseDto(o.getRuleNum(), o.getScheduledDate(), o.getOccurrenceStatus().getCode(), o.getTransNum(), o.getTransferNum());
 	}
 
 	private static LocalDate limitOf(LocalDate today, LocalDate until) {
@@ -368,7 +371,7 @@ public class RecurringService {
 
 	// 현금 · 통장은 0 아래가 모자람, 마이너스통장 · 카드는 한도 밖이 모자람(한도를 안 적었으면 모자람 없음)
 	private static boolean isShortage(AccountResponseDto account, long lowestBalance) {
-		if (Account.canBeNegative(account.getAccountType())) {
+		if (AccountType.fromCode(account.getAccountType()).canBeNegative()) {
 			return account.getCreditLimit() != null && lowestBalance < -account.getCreditLimit();
 		}
 		return lowestBalance < 0;

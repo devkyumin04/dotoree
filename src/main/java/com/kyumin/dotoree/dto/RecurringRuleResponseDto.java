@@ -2,6 +2,7 @@ package com.kyumin.dotoree.dto;
 
 import java.time.LocalDate;
 
+import com.kyumin.dotoree.domain.RepeatType;
 import com.kyumin.dotoree.domain.RecurringRule;
 
 import lombok.Getter;
@@ -43,7 +44,7 @@ public class RecurringRuleResponseDto {
 		rule.setFromAccountNum(fromAccountNum);
 		rule.setToAccountNum(toAccountNum);
 		rule.setRuleAmount(ruleAmount);
-		rule.setRepeatType(repeatType);
+		rule.setRepeatType(RepeatType.fromCode(repeatType));
 		rule.setRepeatMonth(repeatMonth);
 		rule.setRepeatDay(repeatDay);
 		rule.setStartDate(startDate);

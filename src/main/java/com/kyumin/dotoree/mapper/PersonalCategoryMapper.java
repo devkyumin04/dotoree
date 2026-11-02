@@ -4,6 +4,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import com.kyumin.dotoree.domain.CategoryType;
 import com.kyumin.dotoree.domain.PersonalCategory;
 
 @Mapper
@@ -22,5 +23,5 @@ public interface PersonalCategoryMapper {
     int countChildren(@Param("categoryNum") Integer categoryNum);
     
     PersonalCategory findDefaultCategory(@Param("userNum") Integer userNum,
-            @Param("categoryType") String categoryType);
+            @Param("categoryType") CategoryType categoryType);
 }

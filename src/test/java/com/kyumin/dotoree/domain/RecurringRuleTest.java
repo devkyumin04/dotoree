@@ -66,7 +66,7 @@ class RecurringRuleTest {
 
 	private static RecurringRule monthly(int day, String start, String end) {
 		RecurringRule rule = new RecurringRule();
-		rule.setRepeatType(RecurringRule.MONTHLY);
+		rule.setRepeatType(RepeatType.MONTHLY);
 		rule.setRepeatDay(day);
 		rule.setStartDate(d(start));
 		rule.setEndDate(end == null ? null : d(end));
@@ -75,7 +75,7 @@ class RecurringRuleTest {
 
 	private static RecurringRule yearly(int month, int day, String start, String end) {
 		RecurringRule rule = monthly(day, start, end);
-		rule.setRepeatType(RecurringRule.YEARLY);
+		rule.setRepeatType(RepeatType.YEARLY);
 		rule.setRepeatMonth(month);
 		return rule;
 	}

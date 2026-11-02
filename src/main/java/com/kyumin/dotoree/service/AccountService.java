@@ -9,6 +9,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kyumin.dotoree.domain.AccountType;
 import com.kyumin.dotoree.domain.Account;
 import com.kyumin.dotoree.dto.AccountRequestDto;
 import com.kyumin.dotoree.dto.AccountResponseDto;
@@ -39,7 +40,7 @@ public class AccountService {
 		Account account = new Account();
 		account.setUserNum(userNum);
 		account.setAccountName(Account.DEFAULT_ACCOUNT_NAME);
-		account.setAccountType(Account.TYPE_CASH);
+		account.setAccountType(AccountType.CASH);
 		account.setOpeningBalance(0L);
 		account.setOpeningDate(null);    // 시작 날짜 없음 = 처음부터 — 아무도 "그날 현금 0원"이라고 말한 적이 없다 (V6)
 		account.setIsDefaultYn("Y");
@@ -65,7 +66,7 @@ public class AccountService {
 		Account account = new Account();
 		account.setUserNum(userNum);
 		account.setAccountName(requestDto.getAccountName());
-		account.setAccountType(requestDto.getAccountType());
+		account.setAccountType(AccountType.fromCode(requestDto.getAccountType()));
 		account.setOpeningBalance(requestDto.getOpeningBalance());
 		account.setCreditLimit(requestDto.getCreditLimit());
 		// 시작 날짜 — 비우면 오늘. 시작 잔액은 "그날 기준 잔액" (ADR-065 ⑦)
@@ -110,7 +111,7 @@ public class AccountService {
 		validateUniqueName(userNum, requestDto.getAccountName(), accountNum);
 
 		account.setAccountName(requestDto.getAccountName());
-		account.setAccountType(requestDto.getAccountType());
+		account.setAccountType(AccountType.fromCode(requestDto.getAccountType()));
 		account.setOpeningBalance(requestDto.getOpeningBalance());
 		account.setCreditLimit(requestDto.getCreditLimit());
 		if (requestDto.getOpeningDate() != null) {
@@ -179,7 +180,7 @@ public class AccountService {
 	// 종류별 시작 잔액 · 한도 규칙 (10/20 확정)
 	// 현금 · 통장 — 0 이상, 한도 없음 / 마이너스통장 · 카드 — −한도까지(한도를 안 적으면 제한 없음)
 	private void validateBalanceRule(AccountRequestDto requestDto) {
-		boolean canBeNegative = Account.canBeNegative(requestDto.getAccountType());
+		boolean canBeNegative = AccountType.fromCode(requestDto.getAccountType()).canBeNegative();
 		Long creditLimit = requestDto.getCreditLimit();
 		long openingBalance = requestDto.getOpeningBalance();
 
@@ -205,7 +206,7 @@ public class AccountService {
 		AccountResponseDto responseDto = new AccountResponseDto();
 		responseDto.setAccountNum(account.getAccountNum());
 		responseDto.setAccountName(account.getAccountName());
-		responseDto.setAccountType(account.getAccountType());
+		responseDto.setAccountType(account.getAccountType().getCode());
 		responseDto.setOpeningBalance(account.getOpeningBalance());
 		responseDto.setCreditLimit(account.getCreditLimit());
 		responseDto.setOpeningDate(account.getOpeningDate());

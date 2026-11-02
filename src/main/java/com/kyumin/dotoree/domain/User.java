@@ -19,7 +19,7 @@ public class User {
     private String userPw;
     private String userNickname;
     private String userEmail;
-    private String userStatus;
+    private UserStatus userStatus;
     private LocalDateTime userWithdrawnAt;
     private Integer loginFailCount;
     private LocalDateTime lockedUntil;

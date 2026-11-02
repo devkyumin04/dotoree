@@ -72,7 +72,7 @@ public class PersonalTransactionService {
 		responseDto.setTransAmount(transaction.getTransAmount());
 		responseDto.setTransDate(transaction.getTransDate());
 		responseDto.setTransMemo(transaction.getTransMemo());
-		responseDto.setTransType(transaction.getTransType());
+		responseDto.setTransType(transaction.getTransType().getCode());
 		responseDto.setAccountNum(account.getAccountNum());
 		responseDto.setAccountName(account.getAccountName());
 		responseDto.setCategoryNum(category.getCategoryNum());
@@ -165,7 +165,7 @@ public class PersonalTransactionService {
 		responseDto.setTransAmount(transaction.getTransAmount());
 		responseDto.setTransDate(transaction.getTransDate());
 		responseDto.setTransMemo(transaction.getTransMemo());
-		responseDto.setTransType(transaction.getTransType());
+		responseDto.setTransType(transaction.getTransType().getCode());
 		responseDto.setAccountNum(account.getAccountNum());
 		responseDto.setAccountName(account.getAccountName());
 		responseDto.setCategoryName(category.getCategoryName());

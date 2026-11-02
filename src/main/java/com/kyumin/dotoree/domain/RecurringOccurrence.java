@@ -13,14 +13,11 @@ import lombok.Setter;
 @NoArgsConstructor
 public class RecurringOccurrence {
 
-	public static final String CONFIRMED = "C";
-	public static final String SKIPPED = "S";
-
 	private Integer occurrenceNum;
 	private Integer ruleNum;
 	private Integer userNum;
 	private LocalDate scheduledDate;
-	private String occurrenceStatus;
+	private OccurrenceStatus occurrenceStatus;
 	private Integer transNum;
 	private Integer transferNum;
 	private LocalDateTime createdAt;
