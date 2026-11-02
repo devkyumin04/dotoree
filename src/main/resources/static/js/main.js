@@ -1,6 +1,5 @@
 // 메인은 공개 화면 — 로그인 안 한 사람(처음 온 사람·SES 심사자)도 소개를 본다.
 // 기본 HTML 은 비로그인 모양이라 JS 가 안 돌아도 소개가 보인다. 토큰이 있을 때만 환영 문구·마이페이지·로그아웃
-const token = localStorage.getItem('accessToken');
 const welcomeMessage = document.getElementById('welcomeMessage');
 const logoutBtn = document.getElementById('logoutBtn');
 const loginLink = document.getElementById('loginLink');
@@ -43,7 +42,7 @@ function showGuest() {
     });
 }
 
-if (token) {
+if (hasSession()) {
     loginLink.hidden = true;
     signupLink.hidden = true;
     mypageLink.hidden = false;
