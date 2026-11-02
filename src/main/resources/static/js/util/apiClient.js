@@ -85,6 +85,13 @@ function expireSession(options) {
 let accessToken = null;
 const SESSION_KEY = 'hasSession';
 
+// 옛 방식(Access 를 localStorage 에)으로 로그인해 둔 브라우저 — 토큰 원문은 지우고 표시만 남긴다(쿠키가 살아 있으면 로그인이 이어진다)
+// 지우지 않으면 XSS 가 옛 토큰을 15분 동안 꺼내 갈 수 있다. 배포 뒤 한동안만 필요한 줄 (ADR-071)
+if (localStorage.getItem('accessToken')) {
+    localStorage.removeItem('accessToken');
+    localStorage.setItem(SESSION_KEY, '1');
+}
+
 // 로그인한 적 있나 — 토큰이 아니라 표시(값 '1')다. 로그인·가입이 켜고, 로그아웃·탈퇴·만료가 끈다
 function hasSession() {
     return localStorage.getItem(SESSION_KEY) === '1';

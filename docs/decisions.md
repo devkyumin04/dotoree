@@ -888,6 +888,7 @@
   4. **공개 요청은 `{ anonymous: true }`** — 로그인 · 데모 로그인 · 가입 · 비번 재설정 · 이메일 코드 발송은 토큰을 붙이지도 재발급하지도 않는다. 401 은 "세션 만료"가 아니라 그냥 실패(틀린 비번 등)
 - **근거** — XSS 로 저장된 토큰을 꺼내 가는 가장 쉬운 길을 막는다. 포폴에서 "Access 는 메모리, Refresh 는 HttpOnly 쿠키"로 한 줄 설명된다
 - **감수** — 화면 이동마다 재발급 1번(로테이션도 그만큼) / 다른 탭에서 로그아웃해도 이 탭의 메모리 Access 는 만료(15분)까지 산다(전엔 `localStorage` 라 같이 지워졌다 — Access 는 폐기할 수 없다는 ADR-052 감수와 같은 범위) / **XSS 자체는 막지 못한다** — 페이지 안에서 API 를 대신 부르는 건 `escapeHtml` · CSP 몫 / 락이 없는 브라우저는 새 탭 동시 열기에서 드물게 로그아웃될 수 있다
+- **옮겨 타기** — 옛 방식으로 로그인해 둔 브라우저는 `apiClient.js` 로드 때 `localStorage` 의 옛 `accessToken` 을 지우고 `hasSession` 만 켠다(쿠키가 살아 있으면 로그인 유지, 옛 토큰도 15분 동안 읽히지 않게). 로컬 QA 에서 발견(2026-11-02) — 배포 뒤 Refresh 14일이 지나면 이 줄은 지워도 된다
 - **진행** — `apiClient.js`(`accessToken` · `hasSession` · `startSession` · `clearSession` · `requestRefresh`) · `authGuard.js` · `main.js` · 로그인 · 가입 · 탈퇴 · 마이페이지 · 비번 재설정. 서버 변경 없음
 
 ## 공동 가계부 (폐기)
