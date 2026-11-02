@@ -21,13 +21,13 @@ form.addEventListener('submit', async (e) => {
     const password = document.getElementById('password').value;
     const nickname = document.getElementById('nickname').value;
 
-    // 남아 있던 옛 토큰을 지우고 시작 — 로그인 화면과 같은 이유 (apiClient.js)
-    localStorage.removeItem('accessToken');
+    // 남아 있던 옛 세션을 지우고 시작 — 로그인 화면과 같다
+    clearSession();
 
     await withButtonLock(submitBtn, async () => {
         try {
-            const result = await apiRequest('/api/users/signup', 'POST', { email, code, password, nickname });
-            localStorage.setItem('accessToken', result.accessToken);
+            const result = await apiRequest('/api/users/signup', 'POST', { email, code, password, nickname }, { anonymous: true });
+            startSession(result.accessToken);
             // 가입한 사람은 곧장 가계부로 — 메인에서 한 번 더 누르게 하지 않는다
             window.location.href = '/views/personal/personal-main.html';
         } catch (error) {

@@ -37,7 +37,7 @@ function setupEmailCodeButton({ button, emailInput, message, purpose, codeInput 
 
         button.disabled = true;
         try {
-            await apiRequest('/api/auth/email-codes', 'POST', { email, purpose });
+            await apiRequest('/api/auth/email-codes', 'POST', { email, purpose }, { anonymous: true });
             show('메일을 보냈습니다. 10분 안에 코드를 입력해 주세요. 안 보이면 스팸함도 확인해 주세요.');
             lock(60);
             codeInput.focus();

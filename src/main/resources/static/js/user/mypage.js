@@ -86,7 +86,7 @@ passwordForm.addEventListener('submit', async (e) => {
         try {
             await apiRequest('/api/users/me/password', 'PUT', { currentPassword: confirmedPassword, newPassword });
             // 서버가 이 기기 카드까지 전부 폐기했다(전 세션 폐기) — 남은 Access 도 지우고 새 비번으로 다시 로그인
-            localStorage.removeItem('accessToken');
+            clearSession();
             passwordForm.reset();
             passwordMessage.textContent = '비밀번호를 변경했습니다. 다시 로그인해 주세요.';
             setTimeout(() => {

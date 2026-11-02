@@ -23,9 +23,9 @@ form.addEventListener('submit', async (e) => {
 
     await withButtonLock(submitBtn, async () => {
         try {
-            await apiRequest('/api/auth/password-reset', 'POST', { email, code, newPassword });
+            await apiRequest('/api/auth/password-reset', 'POST', { email, code, newPassword }, { anonymous: true });
             // 이 브라우저의 옛 토큰도 서버에서 이미 끝났다(전 세션 폐기) — 남은 것을 지우고 로그인으로
-            localStorage.removeItem('accessToken');
+            clearSession();
             resultMessage.textContent = '비밀번호를 바꿨습니다. 새 비밀번호로 로그인해 주세요.';
             setTimeout(() => {
                 window.location.href = '/views/user/login.html';
