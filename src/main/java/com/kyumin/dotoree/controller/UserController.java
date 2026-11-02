@@ -6,8 +6,8 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -70,14 +70,15 @@ public class UserController {
     }
 
     // 마이페이지 — 닉네임은 바뀐 내 정보를 돌려준다(화면이 다시 조회하지 않게), 비밀번호는 204
-    @PutMapping("/me/nickname")
+    // 둘 다 사용자 정보의 한 칸만 바꾸므로 PATCH(일부 수정). 비밀번호는 "현재 비번이 맞을 때만"이라 두 번 보내면 결과가 갈려 PUT(멱등)이 아니다
+    @PatchMapping("/me/nickname")
     public ResponseEntity<UserInfoResponseDto> updateNickname(@AuthenticationPrincipal Integer userNum,
                                                               @Valid @RequestBody NicknameRequestDto requestDto) {
         UserInfoResponseDto responseDto = userService.updateNickname(userNum, requestDto);
         return ResponseEntity.status(HttpStatus.OK).body(responseDto);
     }
 
-    @PutMapping("/me/password")
+    @PatchMapping("/me/password")
     public ResponseEntity<Void> changePassword(@AuthenticationPrincipal Integer userNum,
                                                @Valid @RequestBody PasswordChangeRequestDto requestDto) {
         userService.changePassword(userNum, requestDto);

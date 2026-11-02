@@ -138,7 +138,7 @@ class RefreshIntegrationTest extends IntegrationTestSupport {
 		Device second = new Device();
 		second.login(PASSWORD).andExpect(status().isOk());
 
-		request(HttpMethod.PUT, "/api/users/me/password", first.accessToken, """
+		request(HttpMethod.PATCH, "/api/users/me/password", first.accessToken, """
 				{"currentPassword":"%s","newPassword":"%s"}
 				""".formatted(PASSWORD, NEW_PASSWORD))
 				.andExpect(status().isNoContent());

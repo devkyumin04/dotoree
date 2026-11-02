@@ -56,7 +56,7 @@ nicknameForm.addEventListener('submit', async (e) => {
 
     await withButtonLock(nicknameBtn, async () => {
         try {
-            const data = await apiRequest('/api/users/me/nickname', 'PUT', { nickname });
+            const data = await apiRequest('/api/users/me/nickname', 'PATCH', { nickname });
             if (!data) return;
             nicknameInput.value = data.nickname;   // 서버가 저장한 값 그대로
             nicknameMessage.textContent = '닉네임을 변경했습니다.';
@@ -84,7 +84,7 @@ passwordForm.addEventListener('submit', async (e) => {
 
     await withButtonLock(passwordBtn, async () => {
         try {
-            await apiRequest('/api/users/me/password', 'PUT', { currentPassword: confirmedPassword, newPassword });
+            await apiRequest('/api/users/me/password', 'PATCH', { currentPassword: confirmedPassword, newPassword });
             // 서버가 이 기기 카드까지 전부 폐기했다(전 세션 폐기) — 남은 Access 도 지우고 새 비번으로 다시 로그인
             clearSession();
             passwordForm.reset();

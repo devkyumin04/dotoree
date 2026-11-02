@@ -60,21 +60,21 @@ class MyPageIntegrationTest extends IntegrationTestSupport {
 
 	@Test
 	void 토큰_없이_닉네임_변경은_401() throws Exception {
-		request(HttpMethod.PUT, NICKNAME, null, "{\"nickname\":\"새이름\"}")
+		request(HttpMethod.PATCH, NICKNAME, null, "{\"nickname\":\"새이름\"}")
 				.andExpect(status().isUnauthorized());
 	}
 
 	@Test
 	void 공백뿐이거나_21자인_닉네임은_400() throws Exception {
-		request(HttpMethod.PUT, NICKNAME, token, "{\"nickname\":\"   \"}")
+		request(HttpMethod.PATCH, NICKNAME, token, "{\"nickname\":\"   \"}")
 				.andExpect(status().isBadRequest());
-		request(HttpMethod.PUT, NICKNAME, token, "{\"nickname\":\"123456789012345678901\"}")
+		request(HttpMethod.PATCH, NICKNAME, token, "{\"nickname\":\"123456789012345678901\"}")
 				.andExpect(status().isBadRequest());
 	}
 
 	@Test
 	void 닉네임_20자는_200이고_내_정보에도_반영된다() throws Exception {
-		request(HttpMethod.PUT, NICKNAME, token, "{\"nickname\":\"12345678901234567890\"}")
+		request(HttpMethod.PATCH, NICKNAME, token, "{\"nickname\":\"12345678901234567890\"}")
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.nickname").value("12345678901234567890"));
 		request(HttpMethod.GET, "/api/users/me", token, null)
@@ -84,7 +84,7 @@ class MyPageIntegrationTest extends IntegrationTestSupport {
 
 	@Test
 	void 닉네임_본문에_email_userNum을_끼워_넣어도_무시한다() throws Exception {
-		request(HttpMethod.PUT, NICKNAME, token, "{\"nickname\":\"새이름\",\"email\":\"hijack@test.com\",\"userNum\":1}")
+		request(HttpMethod.PATCH, NICKNAME, token, "{\"nickname\":\"새이름\",\"email\":\"hijack@test.com\",\"userNum\":1}")
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.email").value(EMAIL));
 	}
@@ -93,7 +93,7 @@ class MyPageIntegrationTest extends IntegrationTestSupport {
 
 	@Test
 	void 현재_비번이_틀리면_400() throws Exception {
-		request(HttpMethod.PUT, PASSWORD_CHANGE, token, changeBody("wrong-password-1", NEW_PASSWORD))
+		request(HttpMethod.PATCH, PASSWORD_CHANGE, token, changeBody("wrong-password-1", NEW_PASSWORD))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.detail").value(containsString("현재 비밀번호가 일치하지 않습니다")));
 	}
@@ -101,26 +101,26 @@ class MyPageIntegrationTest extends IntegrationTestSupport {
 	@ParameterizedTest(name = "{0}")
 	@ValueSource(strings = { "short1!", "nospecial123" })
 	void 새_비번이_규칙에_안_맞으면_400(String newPassword) throws Exception {
-		request(HttpMethod.PUT, PASSWORD_CHANGE, token, changeBody(PASSWORD, newPassword))
+		request(HttpMethod.PATCH, PASSWORD_CHANGE, token, changeBody(PASSWORD, newPassword))
 				.andExpect(status().isBadRequest());
 	}
 
 	@Test
 	void 새_비번이_빠지면_400() throws Exception {
-		request(HttpMethod.PUT, PASSWORD_CHANGE, token, "{\"currentPassword\":\"" + PASSWORD + "\"}")
+		request(HttpMethod.PATCH, PASSWORD_CHANGE, token, "{\"currentPassword\":\"" + PASSWORD + "\"}")
 				.andExpect(status().isBadRequest());
 	}
 
 	@Test
 	void 지금과_같은_비번으로는_못_바꾼다_400() throws Exception {
-		request(HttpMethod.PUT, PASSWORD_CHANGE, token, changeBody(PASSWORD, PASSWORD))
+		request(HttpMethod.PATCH, PASSWORD_CHANGE, token, changeBody(PASSWORD, PASSWORD))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.detail").value(containsString("현재 비밀번호와 다른 비밀번호")));
 	}
 
 	@Test
 	void 바꾸면_204이고_옛_비번은_끝_새_비번으로_로그인된다() throws Exception {
-		request(HttpMethod.PUT, PASSWORD_CHANGE, token, changeBody(PASSWORD, NEW_PASSWORD))
+		request(HttpMethod.PATCH, PASSWORD_CHANGE, token, changeBody(PASSWORD, NEW_PASSWORD))
 				.andExpect(status().isNoContent());
 
 		// 옛 비번이 끝났는지는 로그인 말고 비번 확인으로 본다 — 틀린 로그인은 실패 기록을 새 트랜잭션(REQUIRES_NEW)으로 쓰는데,
