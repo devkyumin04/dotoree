@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import com.kyumin.dotoree.dto.CategoryRequestDto;
 import com.kyumin.dotoree.dto.CategoryResponseDto;
 import com.kyumin.dotoree.service.PersonalCategoryService;
 
+@Tag(name = "카테고리", description = "대분류 - 소분류 2단계 카테고리 (수입 · 지출)")
 @RestController
 @RequestMapping("/api/categories")
 @RequiredArgsConstructor

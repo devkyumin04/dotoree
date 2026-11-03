@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -21,5 +22,6 @@ public class EmailCodeRequestDto {
 
 	@NotBlank(message = "목적을 골라 주세요.")
 	@Pattern(regexp = "^[SP]$", message = "목적은 S(가입) 또는 P(비밀번호 재설정)입니다.")
+	@Schema(description = "인증 코드의 목적 — S 가입 · P 비밀번호 재설정", allowableValues = {"S", "P"}, example = "S")
 	private String purpose;
 }

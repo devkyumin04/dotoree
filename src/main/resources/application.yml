@@ -33,3 +33,9 @@ dotoree:
     sender: ses # ses(운영 — 인스턴스 역할로 SES 발송) · log(로컬 — 콘솔에 찍기). 그 밖의 값은 기동 실패 (MailConfig, ADR-068)
     region: ap-northeast-2 # SES 프로덕션 액세스는 리전마다 따로 — 승인받은 서울
     from: "dotoree <no-reply@dotoree.app>" # 인증된 도메인의 주소. 받는 메일함은 없다(답장은 support@)
+
+springdoc:
+  packages-to-scan: com.kyumin.dotoree.controller # 우리 컨트롤러만 문서에 올린다
+  swagger-ui:
+    persist-authorization: false # Authorize 에 넣은 토큰을 브라우저에 저장하지 않는다 — 새로고침하면 사라진다 (ADR-071 과 같은 이유, ADR-074)
+    display-request-duration: true

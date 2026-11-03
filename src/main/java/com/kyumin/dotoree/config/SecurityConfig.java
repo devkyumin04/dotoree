@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.config;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
 import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
@@ -32,6 +33,32 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
     
+    // API 문서(Swagger UI) 전용 체인 — 로그인 없이 열고, 이 경로에만 CSP 를 조금 푼다 (ADR-074)
+    // Swagger UI 는 인라인 style 과 data: 이미지(아이콘)를 쓰는데 앱 CSP(default-src 'self')는 둘 다 막는다
+    // 앱 화면(/views/**)의 CSP 는 건드리지 않는다. 스크립트는 여기서도 'self' 만 — style 과 img 만 푼다
+    // @Order(1) 이라 아래 앱 체인(번호 없음 = 맨 뒤)보다 먼저 이 경로를 가져간다
+    @Bean
+    @Order(1)
+    public SecurityFilterChain docsSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**")
+            .csrf(csrf -> csrf.disable())
+            .headers(headers -> headers
+                .contentSecurityPolicy(csp -> csp.policyDirectives(
+                    "default-src "     + "'self'" + "; " +
+                    "style-src "       + "'self' 'unsafe-inline'" + "; " +   // Swagger UI 의 인라인 style
+                    "img-src "         + "'self' data:" + "; " +             // Swagger UI 의 data: 아이콘
+                    "object-src "      + "'none'" + "; " +
+                    "base-uri "        + "'none'" + "; " +
+                    "frame-ancestors " + "'none'" + "; " +
+                    "form-action "     + "'self'"
+                ))
+            )
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        return http.build();
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http

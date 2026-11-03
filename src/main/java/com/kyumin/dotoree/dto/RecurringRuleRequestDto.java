@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 
 import jakarta.validation.constraints.Max;
@@ -34,6 +35,7 @@ public class RecurringRuleRequestDto {
 
 	@NotNull(message = "반복 주기를 고르시오.")
 	@Pattern(regexp = "[MY]", message = "반복 주기는 매달(M) 또는 매년(Y)입니다.")
+	@Schema(description = "반복 주기 — M 매달 · Y 매년 (매년이면 repeatMonth 도 보낸다)", allowableValues = {"M", "Y"}, example = "M")
 	private String repeatType;
 
 	// 매년만 — 매달이면 무시한다

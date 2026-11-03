@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -22,6 +23,7 @@ public class ForecastResponseDto {
 	public static class AccountForecast {
 		private Integer accountNum;
 		private String accountName;
+		@Schema(description = "계좌 종류 — C 현금 · B 통장 · M 마이너스통장 · K 카드", allowableValues = {"C", "B", "M", "K"})
 		private String accountType;
 		private long balance;
 		private long forecastBalance;

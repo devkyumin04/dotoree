@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -9,6 +10,7 @@ public class CategoryResponseDto {
 	private Integer categoryNum;
 	private String categoryName;
 	private String categoryEmoji;
+	@Schema(description = "종류 — I 수입 · E 지출", allowableValues = {"I", "E"})
 	private String categoryType;
 	private Integer parentCategoryNum;
 

@@ -54,6 +54,7 @@
 | 카테고리 | 대분류-소분류 2단계, 이모지, 예약어 '미분류', 삭제 시 거래를 같은 타입 미분류로 이관 |
 | 통계 | 월별 수입·지출·잔액, 카테고리 봉투(대분류 안에 소분류, 비율은 부모 대비), 수입 0원이면 '계산 불가' |
 | 화면 | Vanilla JS 정적 페이지, 다크 모드, Access 는 메모리 · Refresh 는 HttpOnly 쿠키(화면을 옮기거나 만료되면 자동 재발급 — 동시 요청은 1번으로 묶고, 새 탭끼리는 Web Locks 로 한 번에 하나) |
+| API 문서 | **Swagger UI**([/swagger-ui.html](https://dotoree.app/swagger-ui.html)) — 데모 로그인 토큰을 Authorize 에 넣으면 조회 API 를 바로 눌러 볼 수 있고, 에러 응답(ProblemDetail)과 한 글자 코드의 뜻이 적혀 있음([ADR-074](docs/decisions.md)) |
 | 개인정보 | 처리방침 공개, 데이터 전부 국내(AWS 서울) 보관 — 문의 메일까지 |
 
 ## 구조와 기술 스택
@@ -96,7 +97,7 @@ flowchart LR
 
 > 지금은 **Sprint 1(개인 가계부 + 계좌 · 잔액 + 인증 + 배포·운영)** 단계입니다. 영수증·결제내역 캡처 AI 분석(Sprint 2~3)은 설계를 마치고 순서대로 만들고 있습니다.
 
-- **Sprint 1 마무리** — 화면 다듬기, 실무 표준 정리(PATCH · Swagger · record · ETag), 시각 UTC 저장
+- **Sprint 1 마무리** — 화면 다듬기, 실무 표준 정리(PATCH · record · ETag), 시각 UTC 저장
 - **Sprint 2** — Clova OCR, 업로드(사진은 저장하지 않음), 정규식 1차 파싱 + LLM 보완, AI 분석 중 DB 커넥션을 잡지 않는 트랜잭션 분리
 - **Sprint 3** — 상호명 임베딩 검색으로 카테고리·메모 추천, 정확도 전후 비교
 - **Sprint 4** — API 호출 제한(앱 + Nginx), 전체 점검

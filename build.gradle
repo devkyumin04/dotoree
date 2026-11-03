@@ -25,6 +25,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.flywaydb:flyway-mysql'
 	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:4.0.1'
+	// API 문서(Swagger UI) — Spring Boot 4 는 springdoc 3.x 계열 (ADR-074)
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
 	// 인증 코드 메일 — Amazon SES v2 (ADR-068). 버전은 BOM 한 곳에서
 	implementation platform('software.amazon.awssdk:bom:2.55.10')

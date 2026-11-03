@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import com.kyumin.dotoree.dto.PersonalTransactionRequestDto;
 import com.kyumin.dotoree.dto.PersonalTransactionResponseDto;
 import com.kyumin.dotoree.service.PersonalTransactionService;
 
+@Tag(name = "거래", description = "수입 · 지출 거래. 수정은 낙관적 락(version)으로 충돌 시 409")
 @RestController
 @RequestMapping("/api/transactions")
 @RequiredArgsConstructor
