@@ -42,7 +42,7 @@ public class PersonalTransactionService {
 	public PersonalTransactionResponseDto createTransaction(Integer userNum,
 			PersonalTransactionRequestDto requestDto) {
 		
-		PersonalCategory category = personalCategoryMapper.findByCategoryNum(requestDto.getCategoryNum());
+		PersonalCategory category = personalCategoryMapper.findByCategoryNum(requestDto.categoryNum());
 		
 		if(category == null) {
 			throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
@@ -53,13 +53,13 @@ public class PersonalTransactionService {
 		}
 		
 		PersonalTransaction transaction = new PersonalTransaction();
-		transaction.setCategoryNum(requestDto.getCategoryNum());
-		transaction.setTransAmount(requestDto.getTransAmount());
-		transaction.setTransDate(requestDto.getTransDate());
-		transaction.setTransMemo(requestDto.getTransMemo());
+		transaction.setCategoryNum(requestDto.categoryNum());
+		transaction.setTransAmount(requestDto.transAmount());
+		transaction.setTransDate(requestDto.transDate());
+		transaction.setTransMemo(requestDto.transMemo());
 		transaction.setUserNum(userNum);
 		// 계좌 — 비우면 기본 '현금', 고르면 내 것 · 열린 것만 (ADR-065)
-		Account account = accountService.accountForTransaction(userNum, requestDto.getAccountNum());
+		Account account = accountService.accountForTransaction(userNum, requestDto.accountNum());
 		transaction.setAccountNum(account.getAccountNum());
 		transaction.setTransType(category.getCategoryType());
 		transaction.setVersion(0);
@@ -124,7 +124,7 @@ public class PersonalTransactionService {
 			throw new BusinessException(ErrorCode.TRANSACTION_ACCESS_DENIED);
 		}
 		
-		PersonalCategory category = personalCategoryMapper.findByCategoryNum(requestDto.getCategoryNum());
+		PersonalCategory category = personalCategoryMapper.findByCategoryNum(requestDto.categoryNum());
 		
 		if(category == null) {
 			throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
@@ -137,19 +137,19 @@ public class PersonalTransactionService {
 		// 계좌 — 고르면 내 것 · 열린 것만, 비우면 지금 계좌 그대로(닫힌 계좌의 지난 거래도 고칠 수 있다).
 		// 지금 계좌가 비어 있으면(V4 롤백 사이 옛 jar 가 넣은 거래) 기본 계좌로 채운다
 		Account account;
-		if (requestDto.getAccountNum() != null) {
-			account = accountService.accountForTransaction(userNum, requestDto.getAccountNum());
+		if (requestDto.accountNum() != null) {
+			account = accountService.accountForTransaction(userNum, requestDto.accountNum());
 		} else if (transaction.getAccountNum() != null) {
 			account = accountService.findAccount(transaction.getAccountNum());
 		} else {
 			account = accountService.defaultAccount(userNum);
 		}
 		
-		transaction.setCategoryNum(requestDto.getCategoryNum());
+		transaction.setCategoryNum(requestDto.categoryNum());
 		transaction.setAccountNum(account.getAccountNum());
-		transaction.setTransAmount(requestDto.getTransAmount());
-		transaction.setTransDate(requestDto.getTransDate());
-		transaction.setTransMemo(requestDto.getTransMemo());
+		transaction.setTransAmount(requestDto.transAmount());
+		transaction.setTransDate(requestDto.transDate());
+		transaction.setTransMemo(requestDto.transMemo());
 		transaction.setTransType(category.getCategoryType());
 		transaction.setVersion(version);
 		

@@ -40,7 +40,7 @@ public class BalanceAdjustmentController {
 			@AuthenticationPrincipal Integer userNum,
 			@PathVariable Integer accountNum,
 			@Valid @RequestBody BalanceAdjustmentRequestDto requestDto) {
-		BalanceAdjustmentResponseDto created = adjustmentService.adjust(userNum, accountNum, requestDto.getActualBalance());
+		BalanceAdjustmentResponseDto created = adjustmentService.adjust(userNum, accountNum, requestDto.actualBalance());
 		if (created == null) {
 			return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
 		}

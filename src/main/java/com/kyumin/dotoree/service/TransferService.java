@@ -25,8 +25,8 @@ public class TransferService {
 	private final AccountService accountService;
 
 	public TransferResponseDto createTransfer(Integer userNum, TransferRequestDto requestDto) {
-		Account from = accountService.accountForTransaction(userNum, requestDto.getFromAccountNum());
-		Account to = accountService.accountForTransaction(userNum, requestDto.getToAccountNum());
+		Account from = accountService.accountForTransaction(userNum, requestDto.fromAccountNum());
+		Account to = accountService.accountForTransaction(userNum, requestDto.toAccountNum());
 		validateDifferent(from, to);
 
 		Transfer transfer = new Transfer();
@@ -45,8 +45,8 @@ public class TransferService {
 	// 수정 — 두 계좌 다 열려 있어야 한다. 닫힌 계좌는 잔액 0 으로 닫혔으니, 그 계좌가 낀 지난 이체를 고치면 닫힌 계좌 잔액이 0 에서 벗어난다
 	public TransferResponseDto updateTransfer(Integer userNum, Integer transferNum, Integer version, TransferRequestDto requestDto) {
 		Transfer transfer = findOwnedTransfer(userNum, transferNum);
-		Account from = accountService.accountForTransaction(userNum, requestDto.getFromAccountNum());
-		Account to = accountService.accountForTransaction(userNum, requestDto.getToAccountNum());
+		Account from = accountService.accountForTransaction(userNum, requestDto.fromAccountNum());
+		Account to = accountService.accountForTransaction(userNum, requestDto.toAccountNum());
 		validateDifferent(from, to);
 
 		apply(transfer, requestDto);
@@ -83,11 +83,11 @@ public class TransferService {
 	}
 
 	private static void apply(Transfer transfer, TransferRequestDto requestDto) {
-		transfer.setFromAccountNum(requestDto.getFromAccountNum());
-		transfer.setToAccountNum(requestDto.getToAccountNum());
-		transfer.setTransferAmount(requestDto.getTransferAmount());
-		transfer.setTransferDate(requestDto.getTransferDate());
-		transfer.setTransferMemo(requestDto.getTransferMemo());
+		transfer.setFromAccountNum(requestDto.fromAccountNum());
+		transfer.setToAccountNum(requestDto.toAccountNum());
+		transfer.setTransferAmount(requestDto.transferAmount());
+		transfer.setTransferDate(requestDto.transferDate());
+		transfer.setTransferMemo(requestDto.transferMemo());
 	}
 
 	private static TransferResponseDto toResponse(Transfer transfer, int version, Account from, Account to) {

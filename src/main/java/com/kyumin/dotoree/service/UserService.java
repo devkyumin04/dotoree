@@ -54,21 +54,21 @@ public class UserService {
     @Transactional
     public LoginResult signup(SignupRequestDto requestDto) {
 
-        User existingUser = userMapper.findByEmail(requestDto.getEmail());
+        User existingUser = userMapper.findByEmail(requestDto.email());
 
         if (existingUser != null) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
 
 		// 틀리면 400 — 틀린 횟수는 따로 커밋돼 남는다(EmailCodeAttemptService). 암호화(일부러 느림)는 이 거절 뒤에
-		emailVerificationService.verifyAndUse(requestDto.getEmail(), AuthVerification.PURPOSE_SIGNUP, requestDto.getCode());
+		emailVerificationService.verifyAndUse(requestDto.email(), AuthVerification.PURPOSE_SIGNUP, requestDto.code());
 
-        String encodedPassword = passwordEncoder.encode(requestDto.getPassword());
+        String encodedPassword = passwordEncoder.encode(requestDto.password());
         
         User newUser = new User();
-        newUser.setUserEmail(requestDto.getEmail());
+        newUser.setUserEmail(requestDto.email());
         newUser.setUserPw(encodedPassword);
-        newUser.setUserNickname(requestDto.getNickname());
+        newUser.setUserNickname(requestDto.nickname());
         newUser.setUserStatus(UserStatus.ACTIVE);
         newUser.setLoginFailCount(0);
         
@@ -103,7 +103,7 @@ public class UserService {
 	@Transactional
 	public LoginResult login(LoginRequestDto requestDto) {
 
-        User loginUser = userMapper.findByEmail(requestDto.getEmail());
+        User loginUser = userMapper.findByEmail(requestDto.email());
 
         if(loginUser == null) {
         	throw new BusinessException(ErrorCode.LOGIN_FAILED);
@@ -117,7 +117,7 @@ public class UserService {
 			loginAttemptService.resetLoginFail(loginUser.getUserNum());
 		}
 
-        boolean isPasswordMatch = passwordEncoder.matches(requestDto.getPassword(), loginUser.getUserPw());
+        boolean isPasswordMatch = passwordEncoder.matches(requestDto.password(), loginUser.getUserPw());
 
         if (!isPasswordMatch) {
 			LocalDateTime lockedUntil = now.plusMinutes(LOCK_MINUTES);
@@ -182,12 +182,12 @@ public class UserService {
 	// 막는 것: 로그인된 채 둔 화면을 남이 여는 것. 토큰을 가진 사람이 API 를 직접 부르는 건 못 막는다 —
 	//         그래서 비밀번호 변경·탈퇴는 이 관문과 별개로 각자 비밀번호를 다시 받는다 (닉네임은 피해가 작아 받지 않는다)
 	public void verifyPassword(Integer userNum, PasswordConfirmRequestDto requestDto) {
-		checkPassword(userNum, requestDto.getPassword(), ErrorCode.PASSWORD_MISMATCH);
+		checkPassword(userNum, requestDto.password(), ErrorCode.PASSWORD_MISMATCH);
 	}
 
     public UserInfoResponseDto updateNickname(Integer userNum, NicknameRequestDto requestDto) {
 
-        if (userMapper.updateNickname(userNum, requestDto.getNickname()) == 0) {
+        if (userMapper.updateNickname(userNum, requestDto.nickname()) == 0) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
         return getMyInfo(userNum);
@@ -199,15 +199,15 @@ public class UserService {
 	// @Transactional — 비번만 바뀌고 폐기가 실패하면 도둑의 카드가 산다. 둘 다 되거나 둘 다 안 되게(실패하면 사용자가 다시 시도)
 	@Transactional
 	public void changePassword(Integer userNum, PasswordChangeRequestDto requestDto) {
-		checkPassword(userNum, requestDto.getCurrentPassword(), ErrorCode.CURRENT_PASSWORD_MISMATCH);
+		checkPassword(userNum, requestDto.currentPassword(), ErrorCode.CURRENT_PASSWORD_MISMATCH);
 		
 		// 현재 비번은 바로 위에서 맞다고 확인됐으니 원문끼리 비교하면 된다 (해시를 다시 돌릴 필요 없음).
 		// 왼쪽에 현재 비번 — 위 확인을 통과했으니 null 이 아니다 (@Valid @NotBlank 도 막는다)
-		if (requestDto.getCurrentPassword().equals(requestDto.getNewPassword())) {
+		if (requestDto.currentPassword().equals(requestDto.newPassword())) {
 			throw new BusinessException(ErrorCode.SAME_PASSWORD);
 		}
 		
-		String encodedPassword = passwordEncoder.encode(requestDto.getNewPassword());
+		String encodedPassword = passwordEncoder.encode(requestDto.newPassword());
 		
 		// 0행 = 확인과 UPDATE 사이에 탈퇴·파기된 계정 → 없는 사용자로 취급(401)
 		int updatedRows = userMapper.updatePassword(userNum, encodedPassword);
@@ -224,16 +224,16 @@ public class UserService {
 	// 탈퇴 유예('W') 계정도 바꾼다 — 비번을 잊은 채 탈퇴했으면 새 비번으로 로그인해 탈퇴를 취소할 수 있어야 한다(ADR-052)
 	@Transactional
 	public void resetPassword(PasswordResetRequestDto requestDto) {
-		User user = userMapper.findByEmail(requestDto.getEmail());
+		User user = userMapper.findByEmail(requestDto.email());
 
 		// 없는 주소 — 코드를 보낸 적도 없다(sendCode 가 건너뜀). 코드 문제와 같은 문구로
 		if (user == null) {
 			throw new BusinessException(ErrorCode.EMAIL_CODE_EXPIRED);
 		}
 
-		emailVerificationService.verifyAndUse(requestDto.getEmail(), AuthVerification.PURPOSE_PASSWORD_RESET, requestDto.getCode());
+		emailVerificationService.verifyAndUse(requestDto.email(), AuthVerification.PURPOSE_PASSWORD_RESET, requestDto.code());
 
-		String encodedPassword = passwordEncoder.encode(requestDto.getNewPassword());
+		String encodedPassword = passwordEncoder.encode(requestDto.newPassword());
 
 		// 0행 = 확인과 UPDATE 사이에 파기된 계정
 		if (userMapper.resetPassword(user.getUserNum(), encodedPassword) == 0) {
@@ -251,7 +251,7 @@ public class UserService {
 	@Transactional
 	public void withdraw(Integer userNum, PasswordConfirmRequestDto requestDto) {
 
-		checkPassword(userNum, requestDto.getPassword(), ErrorCode.PASSWORD_MISMATCH);
+		checkPassword(userNum, requestDto.password(), ErrorCode.PASSWORD_MISMATCH);
 
 		// 'A' 인 계정만 바뀐다. 0행 = 이미 탈퇴한 계정의 남은 토큰 → 없는 사용자로 취급
 		int withdrawnRows = userMapper.withdraw(userNum, LocalDateTime.now(clock));

@@ -61,16 +61,16 @@ public class AccountService {
 
 	public AccountResponseDto createAccount(Integer userNum, AccountRequestDto requestDto) {
 		validateBalanceRule(requestDto);
-		validateUniqueName(userNum, requestDto.getAccountName(), null);
+		validateUniqueName(userNum, requestDto.accountName(), null);
 
 		Account account = new Account();
 		account.setUserNum(userNum);
-		account.setAccountName(requestDto.getAccountName());
-		account.setAccountType(AccountType.fromCode(requestDto.getAccountType()));
-		account.setOpeningBalance(requestDto.getOpeningBalance());
-		account.setCreditLimit(requestDto.getCreditLimit());
+		account.setAccountName(requestDto.accountName());
+		account.setAccountType(AccountType.fromCode(requestDto.accountType()));
+		account.setOpeningBalance(requestDto.openingBalance());
+		account.setCreditLimit(requestDto.creditLimit());
 		// 시작 날짜 — 비우면 오늘. 시작 잔액은 "그날 기준 잔액" (ADR-065 ⑦)
-		account.setOpeningDate(requestDto.getOpeningDate() != null ? requestDto.getOpeningDate() : LocalDate.now(clock));
+		account.setOpeningDate(requestDto.openingDate() != null ? requestDto.openingDate() : LocalDate.now(clock));
 		account.setIsDefaultYn("N");
 		accountMapper.insertAccount(account);
 
@@ -108,14 +108,14 @@ public class AccountService {
 	public AccountResponseDto updateAccount(Integer userNum, Integer accountNum, AccountRequestDto requestDto) {
 		Account account = findOpenOwnedAccount(userNum, accountNum);
 		validateBalanceRule(requestDto);
-		validateUniqueName(userNum, requestDto.getAccountName(), accountNum);
+		validateUniqueName(userNum, requestDto.accountName(), accountNum);
 
-		account.setAccountName(requestDto.getAccountName());
-		account.setAccountType(AccountType.fromCode(requestDto.getAccountType()));
-		account.setOpeningBalance(requestDto.getOpeningBalance());
-		account.setCreditLimit(requestDto.getCreditLimit());
-		if (requestDto.getOpeningDate() != null) {
-			account.setOpeningDate(requestDto.getOpeningDate());
+		account.setAccountName(requestDto.accountName());
+		account.setAccountType(AccountType.fromCode(requestDto.accountType()));
+		account.setOpeningBalance(requestDto.openingBalance());
+		account.setCreditLimit(requestDto.creditLimit());
+		if (requestDto.openingDate() != null) {
+			account.setOpeningDate(requestDto.openingDate());
 		}
 		accountMapper.updateAccount(account);
 
@@ -180,9 +180,9 @@ public class AccountService {
 	// 종류별 시작 잔액 · 한도 규칙 (10/20 확정)
 	// 현금 · 통장 — 0 이상, 한도 없음 / 마이너스통장 · 카드 — −한도까지(한도를 안 적으면 제한 없음)
 	private void validateBalanceRule(AccountRequestDto requestDto) {
-		boolean canBeNegative = AccountType.fromCode(requestDto.getAccountType()).canBeNegative();
-		Long creditLimit = requestDto.getCreditLimit();
-		long openingBalance = requestDto.getOpeningBalance();
+		boolean canBeNegative = AccountType.fromCode(requestDto.accountType()).canBeNegative();
+		Long creditLimit = requestDto.creditLimit();
+		long openingBalance = requestDto.openingBalance();
 
 		if (!canBeNegative && creditLimit != null) {
 			throw new BusinessException(ErrorCode.ACCOUNT_CREDIT_LIMIT_NOT_ALLOWED);

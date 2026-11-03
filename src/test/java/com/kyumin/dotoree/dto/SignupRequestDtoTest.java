@@ -26,12 +26,7 @@ class SignupRequestDtoTest {
 	}
 
 	private static SignupRequestDto signup(String email, String code, String password, String nickname) {
-		SignupRequestDto dto = new SignupRequestDto();
-		dto.setEmail(email);
-		dto.setCode(code);
-		dto.setPassword(password);
-		dto.setNickname(nickname);
-		return dto;
+		return new SignupRequestDto(email, password, code, nickname);
 	}
 
 	// 거절된 칸 이름들 (예: [password])
