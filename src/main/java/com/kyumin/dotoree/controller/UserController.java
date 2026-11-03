@@ -53,14 +53,14 @@ public class UserController {
 		LoginResult loginResult = userService.login(requestDto);
 		ResponseCookie refreshCookie = refreshCookieProvider.create(loginResult.getRawRefreshToken());
 
-		return ResponseEntity.status(HttpStatus.OK).header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
 				.body(loginResult.getLoginResponse());
     }
     
     @GetMapping("/me")
     public ResponseEntity<UserInfoResponseDto> getMyInfo(@AuthenticationPrincipal Integer userNum) {
         UserInfoResponseDto responseDto = userService.getMyInfo(userNum);
-        return ResponseEntity.status(HttpStatus.OK).body(responseDto);
+        return ResponseEntity.ok(responseDto);
     }
 
     // 마이페이지 관문 — 비밀번호가 맞으면 204. 화면은 이걸 통과해야 내용을 보여준다
@@ -77,7 +77,7 @@ public class UserController {
     public ResponseEntity<UserInfoResponseDto> updateNickname(@AuthenticationPrincipal Integer userNum,
                                                               @Valid @RequestBody NicknameRequestDto requestDto) {
         UserInfoResponseDto responseDto = userService.updateNickname(userNum, requestDto);
-        return ResponseEntity.status(HttpStatus.OK).body(responseDto);
+        return ResponseEntity.ok(responseDto);
     }
 
     @PatchMapping("/me/password")

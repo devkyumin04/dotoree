@@ -48,7 +48,7 @@ public class AccountController {
 
 	@GetMapping
 	public ResponseEntity<List<AccountResponseDto>> getAccounts(@AuthenticationPrincipal Integer userNum) {
-		return ResponseEntity.status(HttpStatus.OK).body(accountService.getAccounts(userNum));
+		return ResponseEntity.ok(accountService.getAccounts(userNum));
 	}
 
 	// 그날 기준 전체 잔액 합계 + 전날 대비 — ?date=2026-10-21, 비우면 오늘
@@ -56,7 +56,7 @@ public class AccountController {
 	public ResponseEntity<BalanceSummaryResponseDto> getSummary(
 			@AuthenticationPrincipal Integer userNum,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-		return ResponseEntity.status(HttpStatus.OK).body(accountService.getSummary(userNum, date));
+		return ResponseEntity.ok(accountService.getSummary(userNum, date));
 	}
 
 	// 월말 전체 잔액 합계 6개월 — ?year=2026&month=10 이 마지막 달
@@ -65,7 +65,7 @@ public class AccountController {
 			@AuthenticationPrincipal Integer userNum,
 			@RequestParam int year,
 			@RequestParam @Min(1) @Max(12) int month) {
-		return ResponseEntity.status(HttpStatus.OK).body(accountService.getMonthlyBalances(userNum, year, month));
+		return ResponseEntity.ok(accountService.getMonthlyBalances(userNum, year, month));
 	}
 
 	@PutMapping("/{accountNum}")
@@ -73,7 +73,7 @@ public class AccountController {
 			@AuthenticationPrincipal Integer userNum,
 			@PathVariable Integer accountNum,
 			@Valid @RequestBody AccountRequestDto requestDto) {
-		return ResponseEntity.status(HttpStatus.OK).body(accountService.updateAccount(userNum, accountNum, requestDto));
+		return ResponseEntity.ok(accountService.updateAccount(userNum, accountNum, requestDto));
 	}
 
 	// ?endRecurring=true — 이 계좌를 쓰는 반복도 같이 끝낸다(없으면 무시)

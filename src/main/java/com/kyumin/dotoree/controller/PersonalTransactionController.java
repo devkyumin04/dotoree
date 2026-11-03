@@ -44,7 +44,7 @@ public class PersonalTransactionController {
 		@RequestParam @Min(1) @Max(12) int month
 	){
 		List<PersonalTransactionResponseDto> responseDtoList = personalTransactionService.getTransactions(userNum, year, month);
-		return ResponseEntity.status(HttpStatus.OK).body(responseDtoList);
+		return ResponseEntity.ok(responseDtoList);
 	}
 	
 
@@ -59,7 +59,7 @@ public class PersonalTransactionController {
 		@Valid @RequestBody PersonalTransactionRequestDto requestDto
 	){
 		PersonalTransactionResponseDto responseDto = personalTransactionService.updateTransaction(userNum, transNum, version, requestDto);
-		return ResponseEntity.status(HttpStatus.OK).body(responseDto);
+		return ResponseEntity.ok(responseDto);
 	}
 
 
