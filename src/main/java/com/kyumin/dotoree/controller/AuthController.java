@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -26,6 +27,7 @@ import com.kyumin.dotoree.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "인증", description = "토큰 재발급 · 로그아웃 · 이메일 인증 코드 · 비밀번호 재설정 · 데모 로그인 (로그인 없이 부른다)")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor

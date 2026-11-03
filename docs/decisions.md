@@ -913,6 +913,18 @@
 - **감수** — SQL 안의 글자 리터럴(`user_status = 'A'` 등)은 그대로라, 코드 글자를 바꾸려면 enum 과 SQL 을 같이 고쳐야 한다 / 새 코드 enum 은 `MyBatisConfig` 에 한 줄 등록해야 한다(빠뜨리면 첫 INSERT 에서 `Data too long` 으로 드러난다) / DTO 는 여전히 String 이라 enum 경계는 서비스 입구다
 - **진행** — enum 5개 · `CodeEnum` · `CodeEnumTypeHandler` · `MyBatisConfig` · 서비스 · 도메인 치환 · 단위 테스트 `CodeEnumTest`. 로드맵 8번 ⑤
 
+### ADR-074. API 문서는 Swagger UI 로 운영에서도 공개 — Try it out 켬, 데모 토큰으로 체험 (2026-11-03)
+
+- **문제** — API 가 40여 개인데 한눈에 훑을 곳이 README · ADR 뿐이었다. 면접관 · 리뷰어가 실행 없이 API 를 보거나 눌러 볼 방법이 없고, 손으로 쓰는 문서는 코드와 어긋난다
+- **선택**
+  1. **springdoc(Swagger UI) 도입, 운영(dotoree.app)에서도 공개** — 문서가 컨트롤러 코드에서 자동으로 만들어져 코드와 어긋나지 않는다. Spring Boot 4 는 springdoc 3.x 계열
+  2. **Try it out 켬** — `POST /api/auth/demo-login` 응답의 토큰을 Authorize 에 넣으면 조회 API 를 바로 부를 수 있다. 데모 계정은 쓰기가 403(DemoGuardFilter)이라 운영 데이터가 바뀌지 않는다
+  3. **문서 경로만 별도 필터 체인** — 로그인 없이 열고, Swagger UI 가 인라인 style · `data:` 아이콘을 쓰므로 이 경로에만 CSP 의 `style-src 'unsafe-inline'` · `img-src data:` 를 허용한다. 스크립트는 그대로 `'self'` 뿐이고, 앱 화면(`/views/**`)의 CSP 는 그대로다
+  4. **설명은 최소** — 컨트롤러별 한글 이름표 · Authorize(Bearer) · 공통 에러(ProblemDetail — 401 · 400 · 404 를 `OpenApiCustomizer` 한 곳에서 규칙으로 붙임) · 한 글자 코드의 뜻(ADR-073). 메서드마다 설명 · 예시는 달지 않는다
+- **근거** — 호출 주소는 화면 JS 로 이미 공개이고, Try it out 을 꺼도 curl 로 같은 호출을 할 수 있어 막는 효과가 없다. 이메일 코드(60초 간격 · 하루 5번)와 로그인 실패(잠금)는 서버가 주소별로 이미 제한한다. 메서드마다 설명을 달면 컨트롤러가 어노테이션으로 덮이고 코드를 고칠 때마다 같이 고쳐야 하는 부채가 된다
+- **감수** — IP 별 호출 제한은 아직 없다(Sprint 4). 주소를 바꿔 가며 인증 메일을 보내는 건 Swagger 없이 curl 로도 되는 약점이고 그때 막는다 / 문서 화면의 CSP 가 앱 화면보다 약간 느슨하다(style 만) / Authorize 에 넣은 토큰은 저장하지 않아 새로고침하면 사라진다(ADR-071 과 같은 이유) / "로그인 없이 열린 주소" 목록이 `SecurityConfig` 와 `OpenApiConfig` 두 곳에 있어 한쪽을 바꾸면 다른 쪽도 바꿔야 한다 — 테스트가 자물쇠 유무를 잡는다
+- **진행** — 의존성 1개 · `OpenApiConfig` · `SecurityConfig` 문서 체인 · 컨트롤러 `@Tag` · DTO 코드 설명 · `ApiDocsIntegrationTest`. 로드맵 8번 ③
+
 ## 공동 가계부 (폐기)
 
 > **폐기 (2026-10-24)** — 공동 가계부 · 정산을 기획에서 뺐다(로드맵은 개인 가계부 + AI 로 Sprint 4 까지). 아래 ADR-030~032 와, 다른 ADR 안의 "공동 가계부(Sprint 4)" 언급은 그때 계획의 기록으로 남긴다

@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -23,6 +24,7 @@ public class CategoryRequestDto {
 	
 	@NotBlank(message = "카테고리 타입을 지정하시오.")
 	@Pattern(regexp="[IE]", message = "잘못된 카테고리 타입입니다!")
+	@Schema(description = "종류 — I 수입 · E 지출", allowableValues = {"I", "E"}, example = "E")
 	private String categoryType;
 
 	// 이름은 입구에서 한 번만 정규화한다 (앞뒤 공백 제거). Lombok 은 직접 쓴 세터가 있으면 그 필드 세터를 만들지 않는다.

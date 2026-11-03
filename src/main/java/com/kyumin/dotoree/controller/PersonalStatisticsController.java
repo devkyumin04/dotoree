@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,6 +16,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "통계", description = "월별 수입 · 지출 · 잔액, 카테고리별 비율, 잔액 예측")
 @RestController
 @RequestMapping("/api/statistics")
 @RequiredArgsConstructor

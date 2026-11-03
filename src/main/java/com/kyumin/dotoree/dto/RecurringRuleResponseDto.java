@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 
 import com.kyumin.dotoree.domain.RepeatType;
@@ -17,6 +18,7 @@ import lombok.Setter;
 public class RecurringRuleResponseDto {
 
 	private Integer ruleNum;
+	@Schema(description = "규칙의 종류 — I 수입 · E 지출 (카테고리에서 정해진다) · T 이체", allowableValues = {"I", "E", "T"})
 	private String kind;
 	private Integer categoryNum;
 	private String categoryName;
@@ -29,6 +31,7 @@ public class RecurringRuleResponseDto {
 	private String toAccountName;
 	private Long ruleAmount;
 	private String ruleMemo;
+	@Schema(description = "반복 주기 — M 매달 · Y 매년", allowableValues = {"M", "Y"})
 	private String repeatType;
 	private Integer repeatMonth;
 	private Integer repeatDay;

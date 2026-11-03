@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 
 // 이체 — 거래 API 와 같은 모양(월 목록 · version 은 쿼리 파라미터, ADR-028) (ADR-065)
+@Tag(name = "이체", description = "계좌 사이 이체 (통계에는 안 잡힌다)")
 @RestController
 @RequestMapping("/api/transfers")
 @RequiredArgsConstructor

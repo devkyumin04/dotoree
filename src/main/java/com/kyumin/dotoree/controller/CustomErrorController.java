@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.controller;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.boot.webmvc.error.ErrorController;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 import jakarta.servlet.http.HttpServletRequest;
 
+@Hidden
 @Controller
 public class CustomErrorController implements ErrorController {
 

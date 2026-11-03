@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 // 잔액 맞추기 (ADR-066)
 // 만들기는 계좌 아래(POST /api/accounts/{n}/adjustments — "이 계좌를 맞춘다"), 월 목록 · 지우기는 이체처럼 /api/adjustments
 // 차이가 0 이면 만들 게 없어 204
+@Tag(name = "잔액 보정", description = "은행 앱의 실제 잔액을 넣으면 서버가 차이만큼 보정 (통계에는 안 잡힌다)")
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor

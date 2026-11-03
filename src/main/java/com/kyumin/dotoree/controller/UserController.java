@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -26,6 +27,7 @@ import com.kyumin.dotoree.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "회원", description = "가입 · 로그인 · 내 정보 · 닉네임 · 비밀번호 · 탈퇴")
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor

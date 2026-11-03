@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 
 import lombok.Getter;
@@ -17,6 +18,7 @@ public class PersonalTransactionResponseDto {
 	private Long transAmount;
 	private LocalDate transDate;
 	private String transMemo;
+	@Schema(description = "거래 종류 — 그 거래가 속한 카테고리의 종류를 그대로 따른다 (I 수입 · E 지출)", allowableValues = {"I", "E"})
 	private String transType;
 	
 	private String categoryName;

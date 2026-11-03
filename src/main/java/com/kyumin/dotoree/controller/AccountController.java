@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -30,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 
 // 계좌 — 등록 · 목록(잔액 포함) · 수정 · 닫기 (ADR-065)
 // 닫기를 DELETE 로 받는 이유 — 화면에선 "계좌 지우기"지만 서버는 기록을 남기고 숨긴다(카테고리 · 거래의 use_yn 과 같은 모양)
+@Tag(name = "계좌", description = "현금 · 통장 · 마이너스통장 · 카드 계좌와 지금 잔액")
 @RestController
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor

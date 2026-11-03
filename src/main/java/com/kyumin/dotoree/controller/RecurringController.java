@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -30,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 
 // 반복 예정 (욕조 ② — ADR-067)
 // 규칙 CRUD · 남은 예정 · 확인(거래 · 이체가 생김) · 건너뛰기 · 예상 잔액. until 을 비우면 다음 달 말
+@Tag(name = "반복 예정", description = "월세 · 카드값 같은 반복 규칙과 예정의 확인 · 건너뜀")
 @RestController
 @RequestMapping("/api/recurring")
 @RequiredArgsConstructor

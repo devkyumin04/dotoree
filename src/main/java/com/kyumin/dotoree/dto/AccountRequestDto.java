@@ -1,5 +1,6 @@
 package com.kyumin.dotoree.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 
 import jakarta.validation.constraints.Max;
@@ -26,6 +27,7 @@ public class AccountRequestDto {
 
 	@NotBlank(message = "계좌 종류를 지정하시오.")
 	@Pattern(regexp = "[CBMK]", message = "잘못된 계좌 종류입니다!")
+	@Schema(description = "계좌 종류 — C 현금 · B 통장 · M 마이너스통장 · K 카드", allowableValues = {"C", "B", "M", "K"}, example = "B")
 	private String accountType;
 
 	@NotNull(message = "시작 잔액을 입력하시오.")
