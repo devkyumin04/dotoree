@@ -52,8 +52,8 @@ public class EmailVerificationService {
 	// 감수 — 같은 주소로 동시에 두 요청이 오면 둘 다 60초 검사를 지날 수 있다(잠글 줄이 아직 없다). 한 사람이 버튼을 연타해도 버튼 잠금이 먼저 막고, 넘어와도 몇 통이다
 	@Transactional
 	public void sendCode(EmailCodeRequestDto requestDto) {
-		String email = requestDto.getEmail();
-		String purpose = requestDto.getPurpose();
+		String email = requestDto.email();
+		String purpose = requestDto.purpose();
 
 		// 데모 계정은 받는 사람이 없는 주소 — 재설정 코드를 보내지 않는다(없는 주소와 같이 성공처럼 204)
 		boolean registered = userMapper.findByEmail(email) != null && !demoAccount.isDemo(email);

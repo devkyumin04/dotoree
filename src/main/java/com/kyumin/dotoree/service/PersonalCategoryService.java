@@ -30,18 +30,18 @@ public class PersonalCategoryService {
 
     public CategoryResponseDto createCategory(Integer userNum, CategoryRequestDto requestDto) {
     	
-    	if (PersonalCategory.DEFAULT_CATEGORY_NAME.equals(requestDto.getCategoryName())) {
+    	if (PersonalCategory.DEFAULT_CATEGORY_NAME.equals(requestDto.categoryName())) {
     	    throw new BusinessException(ErrorCode.RESERVED_CATEGORY_NAME);
     	}
     	
-    	CategoryType categoryType = CategoryType.fromCode(requestDto.getCategoryType());
-    	validateParent(userNum, requestDto.getParentCategoryNum(), categoryType, null);
+    	CategoryType categoryType = CategoryType.fromCode(requestDto.categoryType());
+    	validateParent(userNum, requestDto.parentCategoryNum(), categoryType, null);
     	  
     	PersonalCategory newPersonalCategory = new PersonalCategory();
     	newPersonalCategory.setUserNum(userNum);
-    	newPersonalCategory.setParentCategoryNum(requestDto.getParentCategoryNum());
-    	newPersonalCategory.setCategoryName(requestDto.getCategoryName());
-    	newPersonalCategory.setCategoryEmoji(requestDto.getCategoryEmoji());
+    	newPersonalCategory.setParentCategoryNum(requestDto.parentCategoryNum());
+    	newPersonalCategory.setCategoryName(requestDto.categoryName());
+    	newPersonalCategory.setCategoryEmoji(requestDto.categoryEmoji());
     	newPersonalCategory.setCategoryType(categoryType);
     	newPersonalCategory.setIsDefaultYn("N");
     	newPersonalCategory.setUseYn("Y");
@@ -89,7 +89,7 @@ public class PersonalCategoryService {
     
     public CategoryResponseDto updateCategory(Integer userNum, Integer categoryNum, CategoryRequestDto requestDto) {
     	
-    	if (PersonalCategory.DEFAULT_CATEGORY_NAME.equals(requestDto.getCategoryName())) {
+    	if (PersonalCategory.DEFAULT_CATEGORY_NAME.equals(requestDto.categoryName())) {
     	    throw new BusinessException(ErrorCode.RESERVED_CATEGORY_NAME);
     	}
     	
@@ -107,16 +107,16 @@ public class PersonalCategoryService {
             throw new BusinessException(ErrorCode.DEFAULT_CATEGORY_NOT_EDITABLE);
         }
         
-        validateParent(userNum, requestDto.getParentCategoryNum(), category.getCategoryType(), categoryNum);
+        validateParent(userNum, requestDto.parentCategoryNum(), category.getCategoryType(), categoryNum);
 
         boolean hasChildren = personalCategoryMapper.countChildren(categoryNum) > 0;
-        if (requestDto.getParentCategoryNum() != null && hasChildren) {
+        if (requestDto.parentCategoryNum() != null && hasChildren) {
             throw new BusinessException(ErrorCode.CATEGORY_HAS_CHILDREN_TO_SUB);
         }
         
-        category.setCategoryName(requestDto.getCategoryName());
-        category.setCategoryEmoji(requestDto.getCategoryEmoji());
-        category.setParentCategoryNum(requestDto.getParentCategoryNum());
+        category.setCategoryName(requestDto.categoryName());
+        category.setCategoryEmoji(requestDto.categoryEmoji());
+        category.setParentCategoryNum(requestDto.parentCategoryNum());
         
         personalCategoryMapper.updateCategory(category);
         return toResponseDto(category, hasChildren);

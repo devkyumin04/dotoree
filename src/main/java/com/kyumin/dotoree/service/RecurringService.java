@@ -67,12 +67,12 @@ public class RecurringService {
 		applyTarget(userNum, rule, requestDto);
 		applySchedule(rule, requestDto);
 
-		LocalDate start = requestDto.getStartDate() != null ? requestDto.getStartDate() : today;
+		LocalDate start = requestDto.startDate() != null ? requestDto.startDate() : today;
 		if (start.isBefore(today)) {
 			throw new BusinessException(ErrorCode.RECURRING_START_IN_PAST);
 		}
 		rule.setStartDate(start);
-		applyEndDate(rule, requestDto.getEndDate());
+		applyEndDate(rule, requestDto.endDate());
 
 		recurringMapper.insertRule(rule);
 		return findRuleResponse(userNum, rule.getRuleNum());
@@ -88,14 +88,14 @@ public class RecurringService {
 		applyTarget(userNum, rule, requestDto);
 		applySchedule(rule, requestDto);
 
-		LocalDate start = requestDto.getStartDate();
+		LocalDate start = requestDto.startDate();
 		if (start != null && !start.equals(rule.getStartDate())) {
 			if (start.isBefore(LocalDate.now(clock))) {
 				throw new BusinessException(ErrorCode.RECURRING_START_IN_PAST);
 			}
 			rule.setStartDate(start);
 		}
-		applyEndDate(rule, requestDto.getEndDate());
+		applyEndDate(rule, requestDto.endDate());
 
 		recurringMapper.updateRule(rule);
 		return findRuleResponse(userNum, ruleNum);
@@ -134,30 +134,22 @@ public class RecurringService {
 	@Transactional
 	public OccurrenceResponseDto confirm(Integer userNum, Integer ruleNum, OccurrenceRequestDto requestDto) {
 		RecurringRule rule = findOwnedRule(userNum, ruleNum);
-		LocalDate scheduled = requestDto.getScheduledDate();
+		LocalDate scheduled = requestDto.scheduledDate();
 		validateOpenOccurrence(userNum, rule, scheduled);
 
 		LocalDate today = LocalDate.now(clock);
-		LocalDate actualDate = requestDto.getActualDate() != null ? requestDto.getActualDate()
+		LocalDate actualDate = requestDto.actualDate() != null ? requestDto.actualDate()
 				: (scheduled.isAfter(today) ? today : scheduled);
-		long amount = requestDto.getAmount() != null ? requestDto.getAmount() : rule.getRuleAmount();
+		long amount = requestDto.amount() != null ? requestDto.amount() : rule.getRuleAmount();
 
 		RecurringOccurrence occurrence = newOccurrence(userNum, rule, scheduled, OccurrenceStatus.CONFIRMED);
 		if (rule.isTransfer()) {
-			TransferRequestDto transfer = new TransferRequestDto();
-			transfer.setFromAccountNum(rule.getFromAccountNum());
-			transfer.setToAccountNum(rule.getToAccountNum());
-			transfer.setTransferAmount(amount);
-			transfer.setTransferDate(actualDate);
-			transfer.setTransferMemo(rule.getRuleMemo());
+			TransferRequestDto transfer = new TransferRequestDto(
+					rule.getFromAccountNum(), rule.getToAccountNum(), amount, actualDate, rule.getRuleMemo());
 			occurrence.setTransferNum(transferService.createTransfer(userNum, transfer).getTransferNum());
 		} else {
-			PersonalTransactionRequestDto transaction = new PersonalTransactionRequestDto();
-			transaction.setCategoryNum(rule.getCategoryNum());
-			transaction.setAccountNum(rule.getAccountNum());
-			transaction.setTransAmount(amount);
-			transaction.setTransDate(actualDate);
-			transaction.setTransMemo(rule.getRuleMemo());
+			PersonalTransactionRequestDto transaction = new PersonalTransactionRequestDto(
+					rule.getCategoryNum(), amount, actualDate, rule.getRuleMemo(), rule.getAccountNum());
 			occurrence.setTransNum(personalTransactionService.createTransaction(userNum, transaction).getTransNum());
 		}
 		insertOccurrence(occurrence);
@@ -167,9 +159,9 @@ public class RecurringService {
 	// 건너뛰기 — 이번만 안 나갈 때(미리 냈다 등). 그 예정만 사라진다
 	public OccurrenceResponseDto skip(Integer userNum, Integer ruleNum, OccurrenceRequestDto requestDto) {
 		RecurringRule rule = findOwnedRule(userNum, ruleNum);
-		validateOpenOccurrence(userNum, rule, requestDto.getScheduledDate());
+		validateOpenOccurrence(userNum, rule, requestDto.scheduledDate());
 
-		RecurringOccurrence occurrence = newOccurrence(userNum, rule, requestDto.getScheduledDate(), OccurrenceStatus.SKIPPED);
+		RecurringOccurrence occurrence = newOccurrence(userNum, rule, requestDto.scheduledDate(), OccurrenceStatus.SKIPPED);
 		insertOccurrence(occurrence);
 		return toResponse(occurrence);
 	}
@@ -243,21 +235,21 @@ public class RecurringService {
 
 	// 거래 규칙(카테고리 + 계좌) 또는 이체 규칙(보내는 · 받는 계좌) — 둘 중 하나만. 계좌 검사는 거래 · 이체와 같은 곳
 	private void applyTarget(Integer userNum, RecurringRule rule, RecurringRuleRequestDto requestDto) {
-		boolean isTransaction = requestDto.getCategoryNum() != null;
-		boolean isTransfer = requestDto.getFromAccountNum() != null || requestDto.getToAccountNum() != null;
+		boolean isTransaction = requestDto.categoryNum() != null;
+		boolean isTransfer = requestDto.fromAccountNum() != null || requestDto.toAccountNum() != null;
 		if (isTransaction == isTransfer) {
 			throw new BusinessException(ErrorCode.RECURRING_TARGET_INVALID);
 		}
 
 		if (isTransaction) {
-			PersonalCategory category = personalCategoryMapper.findByCategoryNum(requestDto.getCategoryNum());
+			PersonalCategory category = personalCategoryMapper.findByCategoryNum(requestDto.categoryNum());
 			if (category == null) {
 				throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
 			}
 			if (!category.getUserNum().equals(userNum)) {
 				throw new BusinessException(ErrorCode.CATEGORY_ACCESS_DENIED);
 			}
-			Account account = accountService.accountForTransaction(userNum, requestDto.getAccountNum());
+			Account account = accountService.accountForTransaction(userNum, requestDto.accountNum());
 			rule.setCategoryNum(category.getCategoryNum());
 			rule.setAccountNum(account.getAccountNum());
 			rule.setFromAccountNum(null);
@@ -265,11 +257,11 @@ public class RecurringService {
 			return;
 		}
 
-		if (requestDto.getFromAccountNum() == null || requestDto.getToAccountNum() == null) {
+		if (requestDto.fromAccountNum() == null || requestDto.toAccountNum() == null) {
 			throw new BusinessException(ErrorCode.RECURRING_TARGET_INVALID);
 		}
-		Account from = accountService.accountForTransaction(userNum, requestDto.getFromAccountNum());
-		Account to = accountService.accountForTransaction(userNum, requestDto.getToAccountNum());
+		Account from = accountService.accountForTransaction(userNum, requestDto.fromAccountNum());
+		Account to = accountService.accountForTransaction(userNum, requestDto.toAccountNum());
 		if (from.getAccountNum().equals(to.getAccountNum())) {
 			throw new BusinessException(ErrorCode.TRANSFER_SAME_ACCOUNT);
 		}
@@ -280,15 +272,15 @@ public class RecurringService {
 	}
 
 	private static void applySchedule(RecurringRule rule, RecurringRuleRequestDto requestDto) {
-		rule.setRuleAmount(requestDto.getRuleAmount());
-		rule.setRuleMemo(requestDto.getRuleMemo());
-		rule.setRepeatType(RepeatType.fromCode(requestDto.getRepeatType()));
-		rule.setRepeatDay(requestDto.getRepeatDay());
+		rule.setRuleAmount(requestDto.ruleAmount());
+		rule.setRuleMemo(requestDto.ruleMemo());
+		rule.setRepeatType(RepeatType.fromCode(requestDto.repeatType()));
+		rule.setRepeatDay(requestDto.repeatDay());
 		if (rule.getRepeatType() == RepeatType.YEARLY) {
-			if (requestDto.getRepeatMonth() == null) {
+			if (requestDto.repeatMonth() == null) {
 				throw new BusinessException(ErrorCode.RECURRING_MONTH_REQUIRED);
 			}
-			rule.setRepeatMonth(requestDto.getRepeatMonth());
+			rule.setRepeatMonth(requestDto.repeatMonth());
 		} else {
 			rule.setRepeatMonth(null);
 		}
