@@ -52,7 +52,7 @@ public class BalanceAdjustmentController {
 			@AuthenticationPrincipal Integer userNum,
 			@RequestParam int year,
 			@RequestParam @Min(1) @Max(12) int month) {
-		return ResponseEntity.status(HttpStatus.OK).body(adjustmentService.getAdjustments(userNum, year, month));
+		return ResponseEntity.ok(adjustmentService.getAdjustments(userNum, year, month));
 	}
 
 	@DeleteMapping("/adjustments/{adjustmentNum}")

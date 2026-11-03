@@ -38,7 +38,7 @@ public class PersonalCategoryController {
 
     	List<CategoryResponseDto> responseDtoList = personalCategoryService.getCategories(userNum);
         
-        return ResponseEntity.status(HttpStatus.OK).body(responseDtoList);
+        return ResponseEntity.ok(responseDtoList);
     }
     
     @PutMapping("/{categoryNum}")
@@ -48,7 +48,7 @@ public class PersonalCategoryController {
             @Valid @RequestBody CategoryRequestDto requestDto) {
 
         CategoryResponseDto responseDto = personalCategoryService.updateCategory(userNum, categoryNum, requestDto);
-        return ResponseEntity.status(HttpStatus.OK).body(responseDto);
+        return ResponseEntity.ok(responseDto);
     }
 
     @DeleteMapping("/{categoryNum}")

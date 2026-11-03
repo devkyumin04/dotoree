@@ -6,7 +6,7 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
-// Access 토큰 — 만든 토큰만 통과하고, 바꿔치기·다른 키·만료는 거절 (단위 테스트, 스프링 없이)
+// Access 토큰 — 만든 토큰만 통과하고, 바꿔치기·다른 키·만료·깨진 값은 거절 (단위 테스트, 스프링 없이)
 class JwtTokenProviderTest {
 
 	// HS256 은 키가 32바이트 이상이어야 한다
@@ -19,9 +19,8 @@ class JwtTokenProviderTest {
 		// given
 		String token = provider.createAccessToken(42);
 
-		// when · then
-		assertThat(provider.validateToken(token)).isTrue();
-		assertThat(provider.getUserNumFromToken(token)).isEqualTo(42);
+		// when · then — 검증과 번호 꺼내기가 한 번의 파싱
+		assertThat(provider.parseUserNum(token)).contains(42);
 	}
 
 	@Test
@@ -32,7 +31,7 @@ class JwtTokenProviderTest {
 		String forged = mine[0] + "." + other[1] + "." + mine[2];
 
 		// when · then
-		assertThat(provider.validateToken(forged)).isFalse();
+		assertThat(provider.parseUserNum(forged)).isEmpty();
 	}
 
 	@Test
@@ -42,7 +41,7 @@ class JwtTokenProviderTest {
 		String token = stranger.createAccessToken(42);
 
 		// when · then
-		assertThat(provider.validateToken(token)).isFalse();
+		assertThat(provider.parseUserNum(token)).isEmpty();
 	}
 
 	@Test
@@ -52,6 +51,13 @@ class JwtTokenProviderTest {
 		String token = expiredProvider.createAccessToken(42);
 
 		// when · then
-		assertThat(provider.validateToken(token)).isFalse();
+		assertThat(provider.parseUserNum(token)).isEmpty();
+	}
+
+	@Test
+	void 토큰_모양이_아닌_값은_거절한다() {
+		// when · then — 빈 문자열은 IllegalArgumentException, 깨진 형식은 JwtException. 둘 다 "비어 있음"으로 받는다
+		assertThat(provider.parseUserNum("")).isEmpty();
+		assertThat(provider.parseUserNum("not-a-token")).isEmpty();
 	}
 }

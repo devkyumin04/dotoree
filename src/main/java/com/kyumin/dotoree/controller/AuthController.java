@@ -43,7 +43,7 @@ public class AuthController {
 		RefreshResult refreshResult = refreshTokenService.refresh(rawToken)
 				.orElseThrow(() -> new BusinessException(ErrorCode.REFRESH_FAILED));
 		ResponseCookie cookie = refreshCookieProvider.create(refreshResult.getRawRefreshToken());
-		return ResponseEntity.status(HttpStatus.OK).header(HttpHeaders.SET_COOKIE, cookie.toString())
+		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString())
 				.body(new RefreshResponseDto(refreshResult.getAccessToken()));
 	}
 	
@@ -52,7 +52,7 @@ public class AuthController {
 	public ResponseEntity<LoginResponseDto> demoLogin() {
 		LoginResult loginResult = userService.demoLogin();
 		ResponseCookie cookie = refreshCookieProvider.create(loginResult.getRawRefreshToken());
-		return ResponseEntity.status(HttpStatus.OK).header(HttpHeaders.SET_COOKIE, cookie.toString())
+		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString())
 				.body(loginResult.getLoginResponse());
 	}
 

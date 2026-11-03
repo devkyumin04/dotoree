@@ -46,7 +46,7 @@ public class TransferController {
 			@AuthenticationPrincipal Integer userNum,
 			@RequestParam int year,
 			@RequestParam @Min(1) @Max(12) int month) {
-		return ResponseEntity.status(HttpStatus.OK).body(transferService.getTransfers(userNum, year, month));
+		return ResponseEntity.ok(transferService.getTransfers(userNum, year, month));
 	}
 
 	@PutMapping("/{transferNum}")
@@ -55,7 +55,7 @@ public class TransferController {
 			@PathVariable Integer transferNum,
 			@RequestParam Integer version,
 			@Valid @RequestBody TransferRequestDto requestDto) {
-		return ResponseEntity.status(HttpStatus.OK).body(transferService.updateTransfer(userNum, transferNum, version, requestDto));
+		return ResponseEntity.ok(transferService.updateTransfer(userNum, transferNum, version, requestDto));
 	}
 
 	@DeleteMapping("/{transferNum}")

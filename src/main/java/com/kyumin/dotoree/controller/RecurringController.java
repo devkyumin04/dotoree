@@ -48,7 +48,7 @@ public class RecurringController {
 
 	@GetMapping
 	public ResponseEntity<List<RecurringRuleResponseDto>> getRules(@AuthenticationPrincipal Integer userNum) {
-		return ResponseEntity.status(HttpStatus.OK).body(recurringService.getRules(userNum));
+		return ResponseEntity.ok(recurringService.getRules(userNum));
 	}
 
 	@PutMapping("/{ruleNum}")
@@ -56,7 +56,7 @@ public class RecurringController {
 			@AuthenticationPrincipal Integer userNum,
 			@PathVariable Integer ruleNum,
 			@Valid @RequestBody RecurringRuleRequestDto requestDto) {
-		return ResponseEntity.status(HttpStatus.OK).body(recurringService.updateRule(userNum, ruleNum, requestDto));
+		return ResponseEntity.ok(recurringService.updateRule(userNum, ruleNum, requestDto));
 	}
 
 	@DeleteMapping("/{ruleNum}")
@@ -71,7 +71,7 @@ public class RecurringController {
 	public ResponseEntity<List<PendingOccurrenceDto>> getPending(
 			@AuthenticationPrincipal Integer userNum,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate until) {
-		return ResponseEntity.status(HttpStatus.OK).body(recurringService.getPending(userNum, until));
+		return ResponseEntity.ok(recurringService.getPending(userNum, until));
 	}
 
 	@PostMapping("/{ruleNum}/confirm")
@@ -94,6 +94,6 @@ public class RecurringController {
 	public ResponseEntity<ForecastResponseDto> forecast(
 			@AuthenticationPrincipal Integer userNum,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate until) {
-		return ResponseEntity.status(HttpStatus.OK).body(recurringService.forecast(userNum, until));
+		return ResponseEntity.ok(recurringService.forecast(userNum, until));
 	}
 }
