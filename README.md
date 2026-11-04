@@ -1,6 +1,6 @@
 # 도토리 (dotoree) 🌰
 
-**계좌 잔액까지 맞추는 가계부** (AI 영수증 인식은 개발 중) — 24시간 운영하는 실서비스를 목표로 혼자 기획·설계·개발·배포·운영하고 있습니다.
+**계좌 잔액까지 맞추는 가계부** (AI 영수증 인식은 다음 단계) — 24시간 운영하는 실서비스를 목표로 혼자 기획·설계·개발·배포·운영하고 있습니다.
 
 - **기간 · 인원** — 2026.08 ~ 진행 중 · 1인(기획 · 설계 · 개발 · 배포 · 운영)
 - **스택** — Java 17 · Spring Boot 4 · Spring Security · MyBatis · MySQL 8.4 · AWS(EC2 · S3 · SES · Route 53 · CloudWatch) · GitHub Actions
@@ -18,7 +18,7 @@
 
 ## 깊게 판 것
 
-설계 결정은 이유·대안·감수한 점을 [ADR](docs/decisions.md) 로 남깁니다(68개). 그중 네 가지입니다.
+설계 결정은 이유·대안·감수한 점을 [ADR](docs/decisions.md) 로 남깁니다(70여 개). 그중 네 가지입니다.
 
 ### 1. 잔액을 저장하지 않고 계산한다 — [ADR-065](docs/decisions.md), [066](docs/decisions.md)
 - **문제** — 계좌마다 잔액 칸을 두면 거래를 고치거나 지울 때마다 잔액도 같이 고쳐야 하고, 한 곳만 빠져도 숫자가 어긋난다
@@ -27,7 +27,7 @@
 
 ### 2. 훔친 로그인 토큰을 다시 쓰면 그 로그인 전체를 끊는다 — [ADR-055](docs/decisions.md)
 - **문제** — Refresh 토큰을 쓸 때마다 새 것으로 바꿔도, 서버는 옛 토큰을 들고 온 쪽이 도둑인지 주인인지 알 수 없다
-- **해결** — 로그인 한 번에서 이어진 토큰들을 한 묶음으로 두고, 이미 쓴 토큰이 다시 오면 묶음 전체를 폐기. 응답 유실 · 탭 두 개 동시 갱신은 30초 유예. "이미 썼나 확인 → 바꾸기"를 `UPDATE … WHERE revoked_yn='N'` 한 문장으로 합쳐 동시 요청이 끼어들 틈을 없앴다. 401 을 던져도 폐기는 커밋되게 `noRollbackFor`
+- **해결** — 로그인 한 번에서 이어진 토큰들을 한 묶음으로 두고, 이미 쓴 토큰이 다시 오면 묶음 전체를 폐기. 응답 유실 · 탭 두 개 동시 갱신은 30초 유예. "이미 썼나 확인 → 바꾸기"를 `UPDATE … WHERE revoked_yn='N'` 한 문장으로 합쳐 동시 요청이 끼어들 틈을 없앴다. 거절은 예외 대신 빈 결과로 돌려주고 401 은 커밋 뒤에 던져서, 폐기가 롤백되지 않는다([ADR-062](docs/decisions.md))
 - **결과** — 도둑이 토큰을 한 번 쓰면 주인 쪽 다음 요청에서 그 로그인이 통째로 끊긴다. DB 엔 SHA-256 해시만, 쿠키는 `HttpOnly · Secure · SameSite=Strict`
 
 ### 3. "맥에서만 통하던" 쿼리를 배포 전에 잡는다 — [트러블슈팅 12](docs/트러블슈팅.md), [ADR-064](docs/decisions.md)
@@ -40,7 +40,7 @@
 - **해결** — 서버는 S3 에 넣기만 하고(읽기 · 삭제 권한 없음), 잘린 덤프를 흉내 내 완료 검사를 실측, 별도 DB 에 복원 리허설. 백업이 실패하거나 끊기면 CloudWatch 경보
 - **결과** — 서버가 털려도 지난 백업은 지울 수 없고, 복원이 되는 것까지 확인한 백업만 남는다
 
-**그 밖에** — GitHub 에 장기 키 없이 OIDC 1시간 임시 자격 · 배포할 때만 22번 포트 열기([ADR-042](docs/decisions.md), [048](docs/decisions.md)) · 새 마이그레이션은 이전 jar 로 롤백해도 돌아가게([ADR-053](docs/decisions.md)) · 반복 예정은 `(rule_num, scheduled_date)` UNIQUE 로 두 번 눌러도 거래 한 줄([ADR-067](docs/decisions.md)) · 문의 메일도 국내(SES 서울 → S3)에 보관([ADR-056](docs/decisions.md)) · 상태값 `'A'` · `'W'` 는 enum 으로 읽고, DB 컬럼은 그대로라 마이그레이션 없이([ADR-073](docs/decisions.md))
+**그 밖에** — GitHub 에 장기 키 없이 OIDC 1시간 임시 자격 · 배포할 때만 22번 포트 열기([ADR-047](docs/decisions.md)) · 새 마이그레이션은 이전 jar 로 롤백해도 돌아가게([ADR-053](docs/decisions.md)) · 반복 예정은 `(rule_num, scheduled_date)` UNIQUE 로 두 번 눌러도 거래 한 줄([ADR-067](docs/decisions.md)) · 문의 메일도 국내(SES 서울 → S3)에 보관([ADR-056](docs/decisions.md)) · 상태값 `'A'` · `'W'` 는 enum 으로 읽고, DB 컬럼은 그대로라 마이그레이션 없이([ADR-073](docs/decisions.md))
 
 ## 지금 동작하는 것
 
@@ -52,7 +52,7 @@
 | 잔액 맞추기 | 은행 앱에 보이는 실제 잔액을 넣으면 서버가 차이만큼 보정(보정도 통계에 안 잡힘) |
 | 반복 예정 | 월세 · 카드값 같은 규칙에서 예정을 계산, 확인해야 거래가 됨(금액 · 날짜 고치기 · 이번만 건너뛰기), 두 번 눌러도 한 줄 |
 | 카테고리 | 대분류-소분류 2단계, 이모지, 예약어 '미분류', 삭제 시 거래를 같은 타입 미분류로 이관 |
-| 통계 | 월별 수입·지출·잔액, 카테고리 봉투(대분류 안에 소분류, 비율은 부모 대비), 수입 0원이면 '계산 불가' |
+| 통계 | 월별 수입 · 지출 · 저축률(수입 0원이면 '계산 불가'), 카테고리 봉투(대분류 안에 소분류, 비율은 부모 대비), 6개월 추이와 월말 순자산 |
 | 화면 | Vanilla JS 정적 페이지, 다크 모드, Access 는 메모리 · Refresh 는 HttpOnly 쿠키(화면을 옮기거나 만료되면 자동 재발급 — 동시 요청은 1번으로 묶고, 새 탭끼리는 Web Locks 로 한 번에 하나) |
 | API 문서 | **Swagger UI**([/swagger-ui.html](https://dotoree.app/swagger-ui.html)) — 데모 로그인 토큰을 Authorize 에 넣으면 조회 API 를 바로 눌러 볼 수 있고, 에러 응답(ProblemDetail)과 한 글자 코드의 뜻이 적혀 있음([ADR-074](docs/decisions.md)) |
 | 개인정보 | 처리방침 공개, 데이터 전부 국내(AWS 서울) 보관 — 문의 메일까지 |
@@ -73,9 +73,9 @@ flowchart LR
 - `main` 에 push 하면 **JUnit 단위·통합 테스트 200여 개**가 일회용 MySQL 에서 돌고, 그 빌드의 jar 를 한 번 띄워 헬스 200 을 확인한 뒤 배포합니다. 하나라도 실패하면 배포되지 않습니다.
 
 <details>
-<summary><b>ERD</b> — 지금 쓰는 표 10개 + 쓸 예정 3개(receipt_analysis · merchant_profiles · ai_usage_logs)</summary>
+<summary><b>ERD</b> — 지금 쓰는 표 10개 + AI 용으로 미리 만든 빈 표 3개(receipt_analysis · ai_usage_logs 는 Sprint 2, merchant_profiles 는 임베딩을 빼서 계획 없음)</summary>
 
-<img src="docs/images/erd.png" alt="ERD — 회원 · 인증, 계좌 · 거래 · 이체 · 잔액 보정 · 반복 규칙, 예정된 영수증 분석 · 상호명 임베딩 · AI 호출 기록">
+<img src="docs/images/erd.png" alt="ERD — 회원 · 인증, 계좌 · 거래 · 이체 · 잔액 보정 · 반복 규칙, 미리 만든 영수증 분석 · 상호명 임베딩 · AI 호출 기록">
 
 계좌에 잔액 칸이 없는 것이 핵심입니다 — 잔액은 거래 · 이체 · 보정에서 계산합니다(ADR-065).
 </details>
@@ -84,7 +84,7 @@ flowchart LR
 - **Frontend** — Vanilla JavaScript(ES6+), HTML5/CSS3, Fetch API
 - **Infra** — AWS EC2(ARM t4g) 한 대에 앱 + MySQL, Nginx + Let's Encrypt, S3(백업·메일함), SES, SNS, Route 53 헬스 체크, CloudWatch, GitHub Actions(OIDC), Cloudflare DNS
 - **운영** — systemd, 매일 DB 백업 → S3(복원 리허설까지), 감시는 Route 53 헬스 체크 + CloudWatch 경보(백업·인증서 지표 포함)
-- **예정** — Naver Clova OCR, 로컬 LLM(Ollama), 한국어 문장 임베딩
+- **예정** — Naver Clova OCR, LLM API(카테고리 분류)
 
 ## 문서
 
@@ -95,12 +95,12 @@ flowchart LR
 
 ## 로드맵
 
-> 지금은 **Sprint 1(개인 가계부 + 계좌 · 잔액 + 인증 + 배포·운영)** 단계입니다. 영수증·결제내역 캡처 AI 분석(Sprint 2~3)은 설계를 마치고 순서대로 만들고 있습니다.
+> 지금은 **Sprint 1(개인 가계부 + 계좌 · 잔액 + 인증 + 배포·운영)** 을 마무리하는 단계입니다.
 
-- **Sprint 1 마무리** — 화면 다듬기, 실무 표준 정리(PATCH · record · ETag), 시각 UTC 저장
-- **Sprint 2** — Clova OCR, 업로드(사진은 저장하지 않음), 정규식 1차 파싱 + LLM 보완, AI 분석 중 DB 커넥션을 잡지 않는 트랜잭션 분리
-- **Sprint 3** — 상호명 임베딩 검색으로 카테고리·메모 추천, 정확도 전후 비교
-- **Sprint 4** — API 호출 제한(앱 + Nginx), 전체 점검
+- **Sprint 1 마무리** — 전체 리뷰
+- **Sprint 2 — 돈 기록의 기본기** — 거래 · 이체 생성에 멱등키(`Idempotency-Key`), 동시 요청 테스트, 부하 테스트 수치(인덱스 전후), 낙관적 락을 `ETag` · `If-Match` 로
+- **Sprint 2 — 영수증 AI** — Clova OCR → LLM 분류 → 사용자 확인(사진은 저장하지 않고, 카드번호 등은 가리고 보냄), LLM 이 느리거나 죽을 때의 처리, AI 분석 중 DB 커넥션을 잡지 않는 트랜잭션 분리, 호출 비용 기록, 영수증 30~50장 정확도 실측
+- **그 뒤** — API 호출 제한(앱 + Nginx), 시각 저장 UTC 전환. 상호명 임베딩(옛 Sprint 3)은 뺐습니다
 
 ## 협업 방식
 
