@@ -73,9 +73,9 @@ flowchart LR
 - `main` 에 push 하면 **JUnit 단위·통합 테스트 200여 개**가 일회용 MySQL 에서 돌고, 그 빌드의 jar 를 한 번 띄워 헬스 200 을 확인한 뒤 배포합니다. 하나라도 실패하면 배포되지 않습니다.
 
 <details>
-<summary><b>ERD</b> — 지금 쓰는 표 10개 + AI 용으로 미리 만든 빈 표 3개(receipt_analysis · ai_usage_logs 는 Sprint 2, merchant_profiles 는 임베딩을 빼서 계획 없음)</summary>
+<summary><b>ERD</b> — 지금 쓰는 표 10개 + Sprint 2(영수증 AI)용으로 미리 만든 빈 표 2개(receipt_analysis · ai_usage_logs)</summary>
 
-<img src="docs/images/erd.png" alt="ERD — 회원 · 인증, 계좌 · 거래 · 이체 · 잔액 보정 · 반복 규칙, 미리 만든 영수증 분석 · 상호명 임베딩 · AI 호출 기록">
+<img src="docs/images/erd.png" alt="ERD — 회원 · 인증, 계좌 · 거래 · 이체 · 잔액 보정 · 반복 규칙, Sprint 2 용 영수증 분석 · AI 호출 기록">
 
 계좌에 잔액 칸이 없는 것이 핵심입니다 — 잔액은 거래 · 이체 · 보정에서 계산합니다(ADR-065).
 </details>
