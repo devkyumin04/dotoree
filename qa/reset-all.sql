@@ -22,7 +22,6 @@ TRUNCATE TABLE refresh_tokens;
 TRUNCATE TABLE auth_verifications;
 TRUNCATE TABLE ai_usage_logs;
 TRUNCATE TABLE receipt_analysis;
-TRUNCATE TABLE merchant_profiles;
 TRUNCATE TABLE users;
 
 SET FOREIGN_KEY_CHECKS = 1;

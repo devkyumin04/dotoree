@@ -19,7 +19,6 @@ public class PersonalTransaction {
 	private Long transAmount;
 	private LocalDate transDate;
 	private String transMemo;
-	private String placeName;
 	private String aiAnalyzedYn;
 	private Integer version;
 	private String useYn;
