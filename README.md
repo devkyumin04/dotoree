@@ -1,10 +1,10 @@
-# 도토리 (dotoree) 🌰
+# 도토리 (dotoree)
 
-**계좌 잔액까지 맞추는 가계부** (AI 영수증 인식은 다음 단계) — 24시간 운영하는 실서비스를 목표로 혼자 기획·설계·개발·배포·운영하고 있습니다.
+계좌 잔액까지 맞추는 가계부입니다. 24시간 돌아가는 실서비스를 목표로 혼자 기획·설계·개발·배포·운영하고 있습니다. (AI 영수증 인식은 다음 단계)
 
-- **기간 · 인원** — 2026.08 ~ 진행 중 · 1인(기획 · 설계 · 개발 · 배포 · 운영)
-- **스택** — Java 17 · Spring Boot 4 · Spring Security · MyBatis · MySQL 8.4 · AWS(EC2 · S3 · SES · Route 53 · CloudWatch) · GitHub Actions
-- **서비스** — 🔗 **https://dotoree.app** (가입 — 이메일 인증 코드 — 후 써 볼 수 있습니다. 가입 없이 보려면 로그인 화면의 **"데모로 둘러보기"** — 읽기 전용)
+- **기간 · 인원**: 2026.09 ~ 진행 중, 1인
+- **스택**: Java 17 · Spring Boot 4 · Spring Security · MyBatis · MySQL 8.4 · AWS(EC2 · S3 · SES · Route 53 · CloudWatch) · GitHub Actions
+- **서비스**: https://dotoree.app (이메일 인증 코드로 가입하면 써 볼 수 있습니다. 가입 없이 보려면 로그인 화면의 "데모로 둘러보기"를 누르세요. 읽기 전용입니다.)
 
 <p>
   <img src="docs/images/transactions.png" alt="가계부 화면 — 월별 수입 · 지출 · 이번 달 증감, 거래마다 계좌, 계좌 사이 이체는 회색" width="360">
@@ -21,26 +21,26 @@
 설계 결정은 이유·대안·감수한 점을 [ADR](docs/decisions.md) 로 남깁니다(70여 개). 그중 네 가지입니다.
 
 ### 1. 잔액을 저장하지 않고 계산한다 — [ADR-065](docs/decisions.md), [066](docs/decisions.md)
-- **문제** — 계좌마다 잔액 칸을 두면 거래를 고치거나 지울 때마다 잔액도 같이 고쳐야 하고, 한 곳만 빠져도 숫자가 어긋난다
-- **해결** — 잔액 = 시작 잔액 + 수입 − 지출 + 받은 이체 − 보낸 이체. 기록 하나만 진실로 두고 계산은 서비스 메서드 하나 + SQL 하나에만. 이체 · 잔액 보정은 테이블을 따로 둬 통계 쿼리는 그대로
-- **결과** — 잔액이 기록과 어긋날 수 없고, "그날 기준 잔액"도 날짜 조건 하나로 나온다. 느려지면 계산 한 곳의 안쪽만 "월말 스냅샷 + 그 뒤 합"으로 바꾼다
+- **문제:** 계좌마다 잔액 칸을 두면 거래를 고치거나 지울 때마다 잔액도 같이 고쳐야 하고, 한 곳만 빠져도 숫자가 어긋난다
+- **해결:** 잔액 = 시작 잔액 + 수입 − 지출 + 받은 이체 − 보낸 이체. 기록 하나만 진실로 두고 계산은 서비스 메서드 하나 + SQL 하나에만. 이체 · 잔액 보정은 테이블을 따로 둬 통계 쿼리는 그대로
+- **결과:** 잔액이 기록과 어긋날 수 없고, "그날 기준 잔액"도 날짜 조건 하나로 나온다. 느려지면 계산 한 곳의 안쪽만 "월말 스냅샷 + 그 뒤 합"으로 바꾼다
 
 ### 2. 훔친 로그인 토큰을 다시 쓰면 그 로그인 전체를 끊는다 — [ADR-055](docs/decisions.md)
-- **문제** — Refresh 토큰을 쓸 때마다 새 것으로 바꿔도, 서버는 옛 토큰을 들고 온 쪽이 도둑인지 주인인지 알 수 없다
-- **해결** — 로그인 한 번에서 이어진 토큰들을 한 묶음으로 두고, 이미 쓴 토큰이 다시 오면 묶음 전체를 폐기. 응답 유실 · 탭 두 개 동시 갱신은 30초 유예. "이미 썼나 확인 → 바꾸기"를 `UPDATE … WHERE revoked_yn='N'` 한 문장으로 합쳐 동시 요청이 끼어들 틈을 없앴다. 거절은 예외 대신 빈 결과로 돌려주고 401 은 커밋 뒤에 던져서, 폐기가 롤백되지 않는다([ADR-062](docs/decisions.md))
-- **결과** — 도둑이 토큰을 한 번 쓰면 주인 쪽 다음 요청에서 그 로그인이 통째로 끊긴다. DB 엔 SHA-256 해시만, 쿠키는 `HttpOnly · Secure · SameSite=Strict`
+- **문제:** Refresh 토큰을 쓸 때마다 새 것으로 바꿔도, 서버는 옛 토큰을 들고 온 쪽이 도둑인지 주인인지 알 수 없다
+- **해결:** 로그인 한 번에서 이어진 토큰들을 한 묶음으로 두고, 이미 쓴 토큰이 다시 오면 묶음 전체를 폐기. 응답 유실 · 탭 두 개 동시 갱신은 30초 유예. "이미 썼나 확인 → 바꾸기"를 `UPDATE … WHERE revoked_yn='N'` 한 문장으로 합쳐 동시 요청이 끼어들 틈을 없앴다. 거절은 예외 대신 빈 결과로 돌려주고 401 은 커밋 뒤에 던져서, 폐기가 롤백되지 않는다([ADR-062](docs/decisions.md))
+- **결과:** 도둑이 토큰을 한 번 쓰면 주인 쪽 다음 요청에서 그 로그인이 통째로 끊긴다. DB 엔 SHA-256 해시만, 쿠키는 `HttpOnly · Secure · SameSite=Strict`
 
 ### 3. "맥에서만 통하던" 쿼리를 배포 전에 잡는다 — [트러블슈팅 12](docs/트러블슈팅.md), [ADR-064](docs/decisions.md)
-- **문제** — 첫 배포 때 EC2 에서만 `Table 'dotoree.users' doesn't exist`. 원인은 `lower_case_table_names`(맥 2, 리눅스 0). 그때 CI 는 쿼리를 한 번도 실행하지 않았다
-- **해결** — CI 에서 운영과 같은 MySQL 8.4 를 일회용으로 띄워 통합 테스트를 돌리고, 하나라도 실패하면 배포를 멈춘다
-- **결과** — JUnit 200여 개가 배포 전 관문. 새 기능이 탈퇴 데이터 파기와 FK 로 부딪힌 문제도 운영에 나가기 전에 잡았다
+- **문제:** 첫 배포 때 EC2 에서만 `Table 'dotoree.users' doesn't exist`. 원인은 `lower_case_table_names`(맥 2, 리눅스 0). 그때 CI 는 쿼리를 한 번도 실행하지 않았다
+- **해결:** CI 에서 운영과 같은 MySQL 8.4 를 일회용으로 띄워 통합 테스트를 돌리고, 하나라도 실패하면 배포를 멈춘다
+- **결과:** JUnit 200여 개가 배포 전 관문. 새 기능이 탈퇴 데이터 파기와 FK 로 부딪힌 문제도 운영에 나가기 전에 잡았다
 
 ### 4. 백업은 "복원까지 해야 끝" — [ADR-050](docs/decisions.md)
-- **문제** — 매일 백업 파일이 쌓여도, 덤프가 중간에 잘렸거나 복원이 안 되면 없는 것과 같다
-- **해결** — 서버는 S3 에 넣기만 하고(읽기 · 삭제 권한 없음), 잘린 덤프를 흉내 내 완료 검사를 실측, 별도 DB 에 복원 리허설. 백업이 실패하거나 끊기면 CloudWatch 경보
-- **결과** — 서버가 털려도 지난 백업은 지울 수 없고, 복원이 되는 것까지 확인한 백업만 남는다
+- **문제:** 매일 백업 파일이 쌓여도, 덤프가 중간에 잘렸거나 복원이 안 되면 없는 것과 같다
+- **해결:** 서버는 S3 에 넣기만 하고(읽기 · 삭제 권한 없음), 잘린 덤프를 흉내 내 완료 검사를 실측, 별도 DB 에 복원 리허설. 백업이 실패하거나 끊기면 CloudWatch 경보
+- **결과:** 서버가 털려도 지난 백업은 지울 수 없고, 복원이 되는 것까지 확인한 백업만 남는다
 
-**그 밖에** — GitHub 에 장기 키 없이 OIDC 1시간 임시 자격 · 배포할 때만 22번 포트 열기([ADR-047](docs/decisions.md)) · 새 마이그레이션은 이전 jar 로 롤백해도 돌아가게([ADR-053](docs/decisions.md)) · 반복 예정은 `(rule_num, scheduled_date)` UNIQUE 로 두 번 눌러도 거래 한 줄([ADR-067](docs/decisions.md)) · 문의 메일도 국내(SES 서울 → S3)에 보관([ADR-056](docs/decisions.md)) · 상태값 `'A'` · `'W'` 는 enum 으로 읽고, DB 컬럼은 그대로라 마이그레이션 없이([ADR-073](docs/decisions.md))
+**그 밖에:** GitHub 에 장기 키 없이 OIDC 1시간 임시 자격 · 배포할 때만 22번 포트 열기([ADR-047](docs/decisions.md)) · 새 마이그레이션은 이전 jar 로 롤백해도 돌아가게([ADR-053](docs/decisions.md)) · 반복 예정은 `(rule_num, scheduled_date)` UNIQUE 로 두 번 눌러도 거래 한 줄([ADR-067](docs/decisions.md)) · 문의 메일도 국내(SES 서울 → S3)에 보관([ADR-056](docs/decisions.md)) · 상태값 `'A'` · `'W'` 는 enum 으로 읽고, DB 컬럼은 그대로라 마이그레이션 없이([ADR-073](docs/decisions.md))
 
 ## 지금 동작하는 것
 
@@ -73,18 +73,18 @@ flowchart LR
 - `main` 에 push 하면 **JUnit 단위·통합 테스트 200여 개**가 일회용 MySQL 에서 돌고, 그 빌드의 jar 를 한 번 띄워 헬스 200 을 확인한 뒤 배포합니다. 하나라도 실패하면 배포되지 않습니다.
 
 <details>
-<summary><b>ERD</b> — 지금 쓰는 표 10개 + Sprint 2(영수증 AI)용으로 미리 만든 빈 표 2개(receipt_analysis · ai_usage_logs)</summary>
+<summary><b>ERD</b>: 지금 쓰는 표 10개 + Sprint 2(영수증 AI)용으로 미리 만든 빈 표 2개(receipt_analysis · ai_usage_logs)</summary>
 
 <img src="docs/images/erd.png" alt="ERD — 회원 · 인증, 계좌 · 거래 · 이체 · 잔액 보정 · 반복 규칙, Sprint 2 용 영수증 분석 · AI 호출 기록">
 
-계좌에 잔액 칸이 없는 것이 핵심입니다 — 잔액은 거래 · 이체 · 보정에서 계산합니다(ADR-065).
+계좌에 잔액 칸이 없는 것이 핵심입니다. 잔액은 거래 · 이체 · 보정에서 계산합니다(ADR-065).
 </details>
 
-- **Backend** — Java 17, Spring Boot 4, Spring Security, JWT(jjwt), MyBatis, MySQL 8.4, Flyway
-- **Frontend** — Vanilla JavaScript(ES6+), HTML5/CSS3, Fetch API
-- **Infra** — AWS EC2(ARM t4g) 한 대에 앱 + MySQL, Nginx + Let's Encrypt, S3(백업·메일함), SES, SNS, Route 53 헬스 체크, CloudWatch, GitHub Actions(OIDC), Cloudflare DNS
-- **운영** — systemd, 매일 DB 백업 → S3(복원 리허설까지), 감시는 Route 53 헬스 체크 + CloudWatch 경보(백업·인증서 지표 포함)
-- **예정** — Naver Clova OCR, LLM API(카테고리 분류)
+- **Backend**: Java 17, Spring Boot 4, Spring Security, JWT(jjwt), MyBatis, MySQL 8.4, Flyway
+- **Frontend**: Vanilla JavaScript(ES6+), HTML5/CSS3, Fetch API
+- **Infra**: AWS EC2(ARM t4g) 한 대에 앱 + MySQL, Nginx + Let's Encrypt, S3(백업·메일함), SES, SNS, Route 53 헬스 체크, CloudWatch, GitHub Actions(OIDC), Cloudflare DNS
+- **운영**: systemd, 매일 DB 백업 → S3(복원 리허설까지), 감시는 Route 53 헬스 체크 + CloudWatch 경보(백업·인증서 지표 포함)
+- **예정**: Naver Clova OCR, LLM API(카테고리 분류)
 
 ## 문서
 
