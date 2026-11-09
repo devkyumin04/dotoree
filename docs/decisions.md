@@ -734,7 +734,7 @@
   - **권한** — 인스턴스 역할에 `cloudwatch:PutMetricData` 하나, 조건 `cloudwatch:namespace=dotoree` + `aws:RequestedRegion=us-east-1`(이 API 는 리소스로 못 좁혀서 조건으로)
 - **근거**
   - 업체 셋(AWS · UptimeRobot · Healthchecks) → 하나. 비밀이 줄어든다 — 핑 URL(약한 비밀)이 없어지고, 서버는 키 파일 없이 인스턴스 역할로 쓴다
-  - 전부 CLI 로 만들어 작업 이력에 명령째 남는다. 취업 뒤 정리도 AWS 한 곳
+  - 전부 CLI 로 만들어 작업 이력에 명령째 남는다. 나중에 정리할 때도 AWS 한 곳
   - Route 53 헬스 체크 지표는 us-east-1 에만 생긴다 → 경보·통로를 거기 모으면 리전이 하나. 서울 리전 장애 때도 경보는 버지니아에서 울린다
   - 헬스 체크는 도메인이 아니라 **탄력적 IP + Host/SNI `dotoree.app`** 로 — "AWS 엔드포인트" 요금(기본료 무료, HTTPS · 문자열 검사 옵션만 월 약 $2)이고, SNI 가 없으면 Nginx 문지기(모르는 이름은 TLS 거부)에 막힌다
   - "바로" 경보를 1시간 칸으로 만들었더니 실패 값이 들어와도 그 시간이 끝나야 울렸다 → 5분 칸. "끊김" 경보는 24시간을 봐야 해서 1시간 칸 × 24(경보 평가 범위가 하루를 넘지 않게)
@@ -929,7 +929,7 @@
 
 ### ADR-074. API 문서는 Swagger UI 로 운영에서도 공개 — Try it out 켬, 데모 토큰으로 체험 (2026-11-03)
 
-- **문제** — API 가 40여 개인데 한눈에 훑을 곳이 README · ADR 뿐이었다. 면접관 · 리뷰어가 실행 없이 API 를 보거나 눌러 볼 방법이 없고, 손으로 쓰는 문서는 코드와 어긋난다
+- **문제** — API 가 40여 개인데 한눈에 훑을 곳이 README · ADR 뿐이었다. 처음 보는 사람이나 리뷰어가 실행 없이 API 를 보거나 눌러 볼 방법이 없고, 손으로 쓰는 문서는 코드와 어긋난다
 - **선택**
   1. **springdoc(Swagger UI) 도입, 운영(dotoree.app)에서도 공개** — 문서가 컨트롤러 코드에서 자동으로 만들어져 코드와 어긋나지 않는다. Spring Boot 4 는 springdoc 3.x 계열
   2. **Try it out 켬** — `POST /api/auth/demo-login` 응답의 토큰을 Authorize 에 넣으면 조회 API 를 바로 부를 수 있다. 데모 계정은 쓰기가 403(DemoGuardFilter)이라 운영 데이터가 바뀌지 않는다
