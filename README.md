@@ -61,7 +61,7 @@
 
 ```mermaid
 flowchart LR
-    U[브라우저] -->|HTTPS| N[Nginx<br/>80→443, /actuator 차단]
+    U[브라우저] -->|HTTPS| N[Nginx<br/>80→443, /actuator 는 health 만]
     N --> A[Spring Boot<br/>정적 화면 + /api JSON]
     A --> D[(MySQL)]
     D -. 매일 04:00 덤프 .-> S3B[(S3 백업<br/>30일 보관)]
